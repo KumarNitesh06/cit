@@ -7,7 +7,9 @@ export default function HeroCarousel() {
   const images = [
     "/images/slide1.jpg",
     "/images/slide2.jpg",
-    "/images/slide3.jpg"
+    "/images/slide3.jpg",
+    "/images/slide4.jpg",
+    "/images/slide5.jpg"
   ];
   
   const [current, setCurrent] = useState(0);
@@ -15,7 +17,7 @@ export default function HeroCarousel() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrent((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-    }, 5000); // Changes image every 5 seconds
+    }, 2500); // Changes image every 5 seconds
     
     return () => clearInterval(timer);
   }, [images.length]);
