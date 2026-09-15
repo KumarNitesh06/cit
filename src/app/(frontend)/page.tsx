@@ -85,20 +85,20 @@ export default function HomePage() {
 
         <nav className="flex flex-col p-3 space-y-1">
           <button onClick={() => { setActiveTab("home"); setIsMobileMenuOpen(false); }} className={`p-3 text-left rounded-lg text-sm font-bold transition-colors ${activeTab === 'home' ? 'bg-[#4b8b4b]/10 text-[#4b8b4b]' : 'text-slate-600 hover:bg-slate-50'}`}>
-            🏠 Home
+            Home
           </button>
           <button onClick={() => { setActiveTab("department"); setIsMobileMenuOpen(false); }} className={`p-3 text-left rounded-lg text-sm font-bold transition-colors ${activeTab === 'department' ? 'bg-[#4b8b4b]/10 text-[#4b8b4b]' : 'text-slate-600 hover:bg-slate-50'}`}>
-            🏛️ Department
+            Department
           </button>
           <button onClick={() => { setActiveTab("inventory"); setIsMobileMenuOpen(false); }} className={`p-3 text-left rounded-lg text-sm font-bold transition-colors ${activeTab === 'inventory' ? 'bg-[#4b8b4b]/10 text-[#4b8b4b]' : 'text-slate-600 hover:bg-slate-50'}`}>
-            🎒 Equipment Inventory
+            Equipment Inventory
           </button>
           <button onClick={() => { setActiveTab("issued"); setIsMobileMenuOpen(false); }} className={`p-3 text-left rounded-lg text-sm font-bold transition-colors ${activeTab === 'issued' ? 'bg-[#4b8b4b]/10 text-[#4b8b4b]' : 'text-slate-600 hover:bg-slate-50'}`}>
-            ⚡ Active Gear
+            Active Gear
           </button>
           <button onClick={() => { setActiveTab("announcements"); setIsMobileMenuOpen(false); }} className={`p-3 text-left rounded-lg text-sm font-bold transition-colors flex items-center justify-between ${activeTab === 'announcements' ? 'bg-[#4b8b4b]/10 text-[#4b8b4b]' : 'text-slate-600 hover:bg-slate-50'}`}>
-            <span>📢 Announcements</span>
-            <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded shadow-sm">New</span>
+            <span>Announcements</span>
+            <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded shadow-sm"></span>
           </button>
         </nav>
       </aside>
