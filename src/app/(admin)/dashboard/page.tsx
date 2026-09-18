@@ -10,7 +10,8 @@ export default function AdminDashboard() {
   // --- DATA STATES ---
   const [inventory, setInventory] = useState<any[]>([]);
   const [issuedRecords, setIssuedRecords] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]); // NEW
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]); // NEW
 
   // --- FORM STATES ---
   const [itemName, setItemName] = useState("");
@@ -30,6 +31,8 @@ export default function AdminDashboard() {
   const [issuedItem, setIssuedItem] = useState("");
   const [issueQuantity, setIssueQuantity] = useState("1");
   const [issueStatus, setIssueStatus] = useState("");
+  
+  const [isProcessing, setIsProcessing] = useState<string | null>(null); // NEW
 
   // --- FETCH INITIAL DATA & CHECK AUTH ---
   const fetchData = async () => {
@@ -39,9 +42,12 @@ export default function AdminDashboard() {
     const { data: issuedData } = await supabase.from("issued_items").select("*").order("issue_date", { ascending: false });
     if (issuedData) setIssuedRecords(issuedData);
 
-    // NEW: Fetch Announcements
     const { data: annData } = await supabase.from("announcements").select("*").order("date_posted", { ascending: false });
     if (annData) setAnnouncements(annData);
+
+    // NEW: Fetch pending requests
+    const { data: reqData } = await supabase.from("item_requests").select("*").eq("status", "pending").order("request_date", { ascending: false });
+    if (reqData) setPendingRequests(reqData);
   };
 
   useEffect(() => {
@@ -57,6 +63,39 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/login");
+  };
+
+  // --- APPROVAL HANDLERS (NEW) ---
+  const handleApproveRequest = async (requestId: string) => {
+    setIsProcessing(requestId);
+    
+    const { error } = await supabase.rpc('approve_item_request', { 
+      req_id: requestId 
+    });
+
+    if (error) {
+      alert("Failed to approve: " + error.message);
+    } else {
+      fetchData(); // Instantly refreshes inventory, issued items, and removes the pending request
+    }
+    setIsProcessing(null);
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    if (!window.confirm("Are you sure you want to reject this request?")) return;
+    setIsProcessing(requestId);
+    
+    const { error } = await supabase
+      .from("item_requests")
+      .update({ status: "rejected" })
+      .eq("id", requestId);
+
+    if (error) {
+      alert("Failed to reject: " + error.message);
+    } else {
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+    }
+    setIsProcessing(null);
   };
 
   // --- SUBMIT HANDLERS ---
@@ -85,7 +124,7 @@ export default function AdminDashboard() {
     else {
       setAnnStatus("✅ Posted!");
       setAnnTitle(""); setAnnDesc("");
-      fetchData(); // Refresh announcements list
+      fetchData(); 
       setTimeout(() => setAnnStatus(""), 3000);
     }
   };
@@ -124,7 +163,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- DELETE HANDLERS (NEW) ---
+  // --- DELETE HANDLERS ---
   const handleReturnEquipment = async (record: any) => {
     if (!window.confirm(`Mark ${record.quantity}x ${record.item_issued} as returned by ${record.student_name}?`)) return;
     await supabase.from("issued_items").delete().eq("id", record.id);
@@ -163,6 +202,72 @@ export default function AdminDashboard() {
           </button>
         </div>
 
+        {/* 0. PENDING REQUESTS (NEW) */}
+        <div className="bg-orange-50 rounded-xl p-6 border border-orange-100 shadow-sm mb-8">
+          <h2 className="text-xl font-bold text-orange-900 mb-4 flex items-center gap-2">
+            🔔 Pending Gear Requests
+            {pendingRequests.length > 0 && (
+              <span className="bg-orange-600 text-white text-xs px-2 py-1 rounded-full">{pendingRequests.length}</span>
+            )}
+          </h2>
+          {pendingRequests.length > 0 ? (
+            <div className="overflow-x-auto bg-white rounded-lg border border-orange-200">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="bg-orange-100 text-orange-800">
+                    <th className="p-3 font-semibold">Date</th>
+                    <th className="p-3 font-semibold">Student</th>
+                    <th className="p-3 font-semibold">Branch/Sem</th>
+                    <th className="p-3 font-semibold">Gear Requested</th>
+                    <th className="p-3 font-semibold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-orange-100">
+                  {pendingRequests.map((req) => (
+                    <tr key={req.id} className="hover:bg-orange-50/50 transition-colors">
+                      <td className="p-3 text-orange-600 font-medium">
+                        {new Date(req.request_date).toLocaleDateString()}
+                      </td>
+                      <td className="p-3">
+                        <span className="font-bold text-gray-900">{req.student_name}</span> <br/>
+                        <span className="text-xs text-gray-500">{req.roll_no}</span>
+                      </td>
+                      <td className="p-3 text-gray-600">
+                        {req.branch} (S{req.semester})
+                      </td>
+                      <td className="p-3 font-bold text-orange-700">
+                        {req.quantity}x {req.item_name}
+                      </td>
+                      <td className="p-3 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleRejectRequest(req.id)}
+                            disabled={isProcessing === req.id}
+                            className="bg-white text-red-600 border border-red-200 px-3 py-1.5 rounded text-xs font-bold hover:bg-red-50 disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                          <button
+                            onClick={() => handleApproveRequest(req.id)}
+                            disabled={isProcessing === req.id}
+                            className="bg-orange-600 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-orange-700 disabled:opacity-50"
+                          >
+                            {isProcessing === req.id ? "Processing..." : "Approve"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-orange-700 font-medium bg-orange-100/50 p-4 rounded-lg border border-orange-200 border-dashed">
+              All caught up! No pending requests at this time.
+            </p>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* 1. ADD NEW ITEM FORM */}
           <div className="bg-blue-50 rounded-xl p-6 border border-blue-100 shadow-sm">
@@ -194,7 +299,7 @@ export default function AdminDashboard() {
 
         {/* 3. ISSUE EQUIPMENT FORM */}
         <div className="bg-purple-50 rounded-xl p-6 border border-purple-100 shadow-sm mb-8">
-          <h2 className="text-xl font-bold text-purple-900 mb-4">📝 Issue Equipment</h2>
+          <h2 className="text-xl font-bold text-purple-900 mb-4">📝 Manually Issue Equipment</h2>
           <form onSubmit={handleIssueItem} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <input type="text" required value={studentName} onChange={(e) => setStudentName(e.target.value)} className="w-full border border-purple-200 rounded-md p-2.5 text-sm" placeholder="Student Name" />
             <input type="text" required value={rollNo} onChange={(e) => setRollNo(e.target.value)} className="w-full border border-purple-200 rounded-md p-2.5 text-sm" placeholder="Roll Number" />
@@ -255,7 +360,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* 5. DATABASE MANAGEMENT (NEW) */}
+        {/* 5. DATABASE MANAGEMENT */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* INVENTORY MANAGEMENT */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -268,7 +373,14 @@ export default function AdminDashboard() {
                   {inventory.map((item) => (
                     <tr key={item.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                       <td className="py-3 font-bold text-gray-900">{item.item_name}</td>
-                      <td className="py-3 text-gray-600 text-sm">Qty: {item.total_quantity}</td>
+                      <td className="py-3 text-gray-600 text-sm">
+                        {/* THIS LINE IS UPDATED TO SHOW BOTH AVAILABLE AND TOTAL */}
+                        <span className={`font-bold ${item.available_quantity > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                          {item.available_quantity} Available
+                        </span> 
+                        <span className="text-gray-400 mx-1">/</span> 
+                        {item.total_quantity} Total
+                      </td>
                       <td className="py-3 text-right">
                         <button onClick={() => handleDeleteItem(item.id, item.item_name)} className="text-red-500 hover:text-red-700 font-bold text-xs">Remove</button>
                       </td>
