@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
@@ -12,6 +12,95 @@ interface RequestRow {
   max_quantity: number;
 }
 
+// ==========================================
+// CUSTOM SEARCHABLE DROPDOWN COMPONENT
+// ==========================================
+const SearchableDropdown = ({ 
+  items, 
+  selectedId, 
+  onSelect 
+}: { 
+  items: any[], 
+  selectedId: string, 
+  onSelect: (id: string) => void 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selectedItem = items.find(i => i.id === selectedId);
+
+  // Filter items based on name or category
+  const filteredItems = items.filter(item => 
+    item.item_name.toLowerCase().includes(search.toLowerCase()) || 
+    (item.category && item.category.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  return (
+    <div 
+      className="relative w-full" 
+      tabIndex={-1} 
+      onBlur={(e) => {
+        // Close dropdown if user clicks outside of it
+        if (!e.currentTarget.contains(e.relatedTarget)) setIsOpen(false);
+      }}
+    >
+      <div 
+        onClick={() => setIsOpen(!isOpen)} 
+        className="w-full bg-white border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 hover:border-[#6A00F4] transition-colors cursor-pointer flex justify-between items-center"
+      >
+        <span className={selectedItem ? "text-slate-900" : "text-slate-400"}>
+          {selectedItem 
+            ? `${selectedItem.item_name} - ${selectedItem.category || 'General'} (${selectedItem.available_quantity} Available)` 
+            : "Search & Select Equipment..."}
+        </span>
+        <span className={`text-xs transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-slate-950 shadow-[4px_4px_0_0_#6A00F4] max-h-72 overflow-y-auto">
+          <div className="p-2 sticky top-0 bg-white border-b-2 border-slate-100 z-10">
+            <input 
+              type="text" 
+              autoFocus 
+              placeholder="Type to search (e.g., 'Bat' or 'Cricket')..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              className="w-full p-2.5 border-2 border-slate-200 text-sm font-bold focus:border-[#ccff00] focus:ring-0 outline-none transition-colors" 
+            />
+          </div>
+          <div className="py-1">
+            {filteredItems.map(item => (
+              <div 
+                key={item.id} 
+                onClick={() => { 
+                  onSelect(item.id); 
+                  setIsOpen(false); 
+                  setSearch(""); 
+                }} 
+                className="px-4 py-3 hover:bg-slate-950 hover:text-[#ccff00] cursor-pointer text-sm font-bold text-slate-700 transition-colors flex justify-between items-center group"
+              >
+                <span>{item.item_name} <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300 ml-1">• {item.category || 'General'}</span></span>
+                <span className="text-[#6A00F4] group-hover:text-white font-black text-xs bg-slate-100 group-hover:bg-white/20 px-2 py-1 rounded">
+                  {item.available_quantity} left
+                </span>
+              </div>
+            ))}
+            {filteredItems.length === 0 && (
+              <div className="px-4 py-6 text-center text-sm text-slate-400 font-bold">
+                No gear found matching "{search}"
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+// ==========================================
+// MAIN PAGE COMPONENT
+// ==========================================
 export default function RequestGearPage() {
   const [sportsItems, setSportsItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -141,6 +230,7 @@ export default function RequestGearPage() {
         ) : (
           <form onSubmit={handleSubmit} className="bg-white border-2 border-slate-200 p-6 md:p-10 shadow-[4px_4px_0_0_rgba(15,23,42,1)]">
             
+            {/* Identity Form Blocks... */}
             <div className="mb-10">
               <h2 className="text-xl font-black text-slate-950 uppercase italic tracking-tighter mb-4 border-b-2 border-slate-100 pb-2">Student Identity</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -150,11 +240,11 @@ export default function RequestGearPage() {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">CITK Email</label>
-                  <input type="email" required placeholder="e.g. rahul@cit.ac.in" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                  <input type="email" required placeholder="e.g. u24csel0000@cit.ac.in" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Roll Number</label>
-                  <input type="text" required placeholder="e.g. NAL-26-CS-001" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.rollNo} onChange={(e) => setFormData({...formData, rollNo: e.target.value})} />
+                  <input type="text" required placeholder="e.g. 202402022000" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.rollNo} onChange={(e) => setFormData({...formData, rollNo: e.target.value})} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -171,6 +261,7 @@ export default function RequestGearPage() {
               </div>
             </div>
 
+            {/* GEAR LOADOUT SECTION WITH SEARCHABLE DROPDOWN */}
             <div className="mb-10">
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-2 mb-4">
                 <h2 className="text-xl font-black text-slate-950 uppercase italic tracking-tighter">Gear Loadout</h2>
@@ -180,22 +271,18 @@ export default function RequestGearPage() {
               <div className="space-y-4">
                 {requestedItems.map((row, index) => (
                   <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-slate-50 p-4 border-2 border-slate-100">
-                    <div className="w-full sm:flex-grow">
+                    
+                    <div className="w-full sm:flex-grow relative z-20">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Item #{index + 1}</label>
-                      <select 
-                        required 
-                        className="w-full bg-white border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 focus:border-[#6A00F4] focus:outline-none transition-colors"
-                        value={row.item_id}
-                        onChange={(e) => handleItemSelect(row.id, e.target.value)}
-                      >
-                        <option value="" disabled>Select Equipment...</option>
-                        {sportsItems.map(item => (
-                          <option key={item.id} value={item.id}>{item.item_name} ({item.available_quantity} Available)</option>
-                        ))}
-                      </select>
+                      {/* REPLACED STANDARD SELECT WITH CUSTOM SEARCHABLE SELECT */}
+                      <SearchableDropdown 
+                        items={sportsItems} 
+                        selectedId={row.item_id} 
+                        onSelect={(id) => handleItemSelect(row.id, id)} 
+                      />
                     </div>
                     
-                    <div className="w-full sm:w-24 shrink-0">
+                    <div className="w-full sm:w-24 shrink-0 relative z-10">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Qty</label>
                       <input 
                         type="number" 
@@ -211,7 +298,7 @@ export default function RequestGearPage() {
                       />
                     </div>
 
-                    <button type="button" onClick={() => removeRow(row.id)} className={`w-full sm:w-12 h-[48px] flex items-center justify-center border-2 border-slate-200 bg-white hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors ${requestedItems.length === 1 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={requestedItems.length === 1}>
+                    <button type="button" onClick={() => removeRow(row.id)} className={`relative z-10 w-full sm:w-12 h-[48px] flex items-center justify-center border-2 border-slate-200 bg-white hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors ${requestedItems.length === 1 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={requestedItems.length === 1}>
                       ✕
                     </button>
                   </div>
@@ -219,7 +306,7 @@ export default function RequestGearPage() {
               </div>
             </div>
 
-            {/* MANDATORY ID WARNING BLOCK (Adapted for Light Theme) */}
+            {/* MANDATORY ID WARNING BLOCK */}
             <div className="mb-10 relative overflow-hidden bg-slate-950 p-6 md:p-8 border-4 border-[#ccff00] shadow-[8px_8px_0_0_#6A00F4] -skew-x-2 group transition-all hover:-translate-y-1">
               <div className="absolute -right-4 -top-8 text-[120px] font-black text-white/5 italic select-none pointer-events-none group-hover:text-[#6A00F4]/10 transition-colors">
                 ID
