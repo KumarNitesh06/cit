@@ -17,9 +17,9 @@ export default function RequestGearPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Start with completely blank fields
   const [formData, setFormData] = useState({
     name: "",
+    email: "",
     rollNo: "",
     branch: "",
     semester: "1",
@@ -68,6 +68,11 @@ export default function RequestGearPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Strict Official Email Validation
+    if (!formData.email.toLowerCase().endsWith("@cit.ac.in")) {
+      return alert("ACCESS DENIED: You must use your official @cit.ac.in institute email address to request gear.");
+    }
+
     const validItems = requestedItems.filter(item => item.item_id !== "" && Number(item.quantity) > 0);
     if (validItems.length === 0) return alert("Please select at least one item to request.");
     
@@ -76,6 +81,7 @@ export default function RequestGearPage() {
     try {
       const rowsToInsert = validItems.map(item => ({
         student_name: formData.name,
+        student_email: formData.email,
         roll_no: formData.rollNo,
         branch: formData.branch,
         semester: parseInt(formData.semester),
@@ -101,9 +107,9 @@ export default function RequestGearPage() {
 
       if (!emailResponse.ok) throw new Error("Failed to send email notification");
 
-      alert("All requests sent successfully! Awaiting admin approval.");
+      alert("All requests sent successfully! Watch your @cit.ac.in inbox for admin approval.");
       setRequestedItems([{ id: Date.now(), item_id: "", item_name: "", quantity: 1, max_quantity: 1 }]); 
-      setFormData({ name: "", rollNo: "", branch: "", semester: "1" }); // Reset identity form after submission
+      setFormData({ name: "", email: "", rollNo: "", branch: "", semester: "1" });
       
     } catch (error: any) {
       alert(error.message || "An error occurred while submitting your requests.");
@@ -126,7 +132,7 @@ export default function RequestGearPage() {
             Request <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6A00F4] to-purple-400">Gear.</span>
           </h1>
           <p className="mt-4 max-w-lg text-sm text-slate-500 leading-relaxed font-medium">
-            Select multiple items below and submit your request to the sports department in one go.
+            Select multiple items below and submit your reservation to the sports department in one go.
           </p>
         </div>
 
@@ -143,18 +149,24 @@ export default function RequestGearPage() {
                   <input type="text" required placeholder="e.g. Rahul Sharma" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                 </div>
                 <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">CITK Email</label>
+                  <input type="email" required placeholder="e.g. rahul@cit.ac.in" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                </div>
+                <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Roll Number</label>
                   <input type="text" required placeholder="e.g. NAL-26-CS-001" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.rollNo} onChange={(e) => setFormData({...formData, rollNo: e.target.value})} />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Branch</label>
-                  <input type="text" required placeholder="e.g. CSE" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors uppercase" value={formData.branch} onChange={(e) => setFormData({...formData, branch: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Semester</label>
-                  <select className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.semester} onChange={(e) => setFormData({...formData, semester: e.target.value})}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => <option key={sem} value={sem}>Semester {sem}</option>)}
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Branch</label>
+                    <input type="text" required placeholder="e.g. CSE" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors uppercase" value={formData.branch} onChange={(e) => setFormData({...formData, branch: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Semester</label>
+                    <select className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.semester} onChange={(e) => setFormData({...formData, semester: e.target.value})}>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => <option key={sem} value={sem}>Semester {sem}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -204,6 +216,30 @@ export default function RequestGearPage() {
                     </button>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* MANDATORY ID WARNING BLOCK (Adapted for Light Theme) */}
+            <div className="mb-10 relative overflow-hidden bg-slate-950 p-6 md:p-8 border-4 border-[#ccff00] shadow-[8px_8px_0_0_#6A00F4] -skew-x-2 group transition-all hover:-translate-y-1">
+              <div className="absolute -right-4 -top-8 text-[120px] font-black text-white/5 italic select-none pointer-events-none group-hover:text-[#6A00F4]/10 transition-colors">
+                ID
+              </div>
+              <div className="skew-x-2 relative z-10 flex flex-col sm:flex-row gap-5 items-center sm:items-start text-center sm:text-left">
+                <div className="shrink-0 bg-[#ccff00] text-black w-16 h-16 flex items-center justify-center border-2 border-black shadow-[4px_4px_0_0_#6A00F4] -skew-x-6 animate-[pulse_3s_ease-in-out_infinite]">
+                  <span className="skew-x-6 text-3xl">⚠️</span>
+                </div>
+                <div>
+                  <h3 className="font-black text-xl uppercase tracking-widest text-[#ccff00] mb-3">
+                    Mandatory Verification
+                  </h3>
+                  <p className="font-bold text-sm md:text-base leading-relaxed text-gray-300">
+                    This portal secures your reservation. You 
+                    <span className="text-black bg-[#ccff00] px-2 py-0.5 mx-1.5 uppercase tracking-widest border border-black shadow-[2px_2px_0_0_#6A00F4]">MUST</span> 
+                    present your physical 
+                    <span className="text-white underline decoration-[#6A00F4] decoration-4 underline-offset-4 mx-1">CITK Student ID</span> 
+                    card to the admin to collect your equipment. Requests made under false identities will be instantly voided.
+                  </p>
+                </div>
               </div>
             </div>
 

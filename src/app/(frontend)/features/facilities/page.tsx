@@ -32,7 +32,7 @@ export default function FacilitiesPage() {
             </h1>
           </div>
           <p className="max-w-md text-sm text-slate-500 leading-relaxed font-medium">
-            Browse our real-time sports inventory. See what gear is available to borrow right now for your next match.
+            Browse sports inventory. See what gear is available to borrow right now for your next match.
           </p>
         </div>
 

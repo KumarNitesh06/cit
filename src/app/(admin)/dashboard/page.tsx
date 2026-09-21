@@ -11,7 +11,7 @@ export default function AdminDashboard() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [issuedRecords, setIssuedRecords] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<any[]>([]); // NEW
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   // --- FORM STATES ---
   const [itemName, setItemName] = useState("");
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   const [issueQuantity, setIssueQuantity] = useState("1");
   const [issueStatus, setIssueStatus] = useState("");
   
-  const [isProcessing, setIsProcessing] = useState<string | null>(null); // NEW
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   // --- FETCH INITIAL DATA & CHECK AUTH ---
   const fetchData = async () => {
@@ -45,7 +45,6 @@ export default function AdminDashboard() {
     const { data: annData } = await supabase.from("announcements").select("*").order("date_posted", { ascending: false });
     if (annData) setAnnouncements(annData);
 
-    // NEW: Fetch pending requests
     const { data: reqData } = await supabase.from("item_requests").select("*").eq("status", "pending").order("request_date", { ascending: false });
     if (reqData) setPendingRequests(reqData);
   };
@@ -65,37 +64,69 @@ export default function AdminDashboard() {
     router.push("/login");
   };
 
-  // --- APPROVAL HANDLERS (NEW) ---
-  const handleApproveRequest = async (requestId: string) => {
-    setIsProcessing(requestId);
+  // --- APPROVAL HANDLERS (WITH STUDENT NOTIFICATION & UI LOCK) ---
+  const handleApproveRequest = async (req: any) => {
+    setIsProcessing(req.id); // Locks the UI
     
+    // 1. Process Database Approval
     const { error } = await supabase.rpc('approve_item_request', { 
-      req_id: requestId 
+      req_id: req.id 
     });
 
     if (error) {
       alert("Failed to approve: " + error.message);
     } else {
-      fetchData(); // Instantly refreshes inventory, issued items, and removes the pending request
+      // 2. Send Email BEFORE refreshing the data to prevent race conditions
+      if (req.student_email) {
+        await fetch('/api/notify-student', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_email: req.student_email,
+            student_name: req.student_name,
+            item_name: req.item_name,
+            quantity: req.quantity,
+            status: 'approved'
+          })
+        });
+      }
+      // 3. Refresh UI
+      fetchData(); 
     }
-    setIsProcessing(null);
+    setIsProcessing(null); // Unlocks the UI
   };
 
-  const handleRejectRequest = async (requestId: string) => {
+  const handleRejectRequest = async (req: any) => {
     if (!window.confirm("Are you sure you want to reject this request?")) return;
-    setIsProcessing(requestId);
+    setIsProcessing(req.id); // Locks the UI
     
+    // 1. Process Database Rejection
     const { error } = await supabase
       .from("item_requests")
       .update({ status: "rejected" })
-      .eq("id", requestId);
+      .eq("id", req.id);
 
     if (error) {
       alert("Failed to reject: " + error.message);
     } else {
-      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+      // 2. Send Email BEFORE refreshing the data
+      if (req.student_email) {
+        await fetch('/api/notify-student', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_email: req.student_email,
+            student_name: req.student_name,
+            item_name: req.item_name,
+            quantity: req.quantity,
+            status: 'rejected'
+          })
+        });
+      }
+      // 3. Refresh UI
+      setPendingRequests(prev => prev.filter(r => r.id !== req.id));
     }
-    setIsProcessing(null);
+    setIsProcessing(null); // Unlocks the UI
   };
 
   // --- SUBMIT HANDLERS ---
@@ -202,7 +233,7 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* 0. PENDING REQUESTS (NEW) */}
+        {/* 0. PENDING REQUESTS */}
         <div className="bg-orange-50 rounded-xl p-6 border border-orange-100 shadow-sm mb-8">
           <h2 className="text-xl font-bold text-orange-900 mb-4 flex items-center gap-2">
             🔔 Pending Gear Requests
@@ -241,15 +272,15 @@ export default function AdminDashboard() {
                       <td className="p-3 text-right">
                         <div className="flex justify-end gap-2">
                           <button
-                            onClick={() => handleRejectRequest(req.id)}
-                            disabled={isProcessing === req.id}
+                            onClick={() => handleRejectRequest(req)}
+                            disabled={isProcessing !== null}
                             className="bg-white text-red-600 border border-red-200 px-3 py-1.5 rounded text-xs font-bold hover:bg-red-50 disabled:opacity-50"
                           >
                             Reject
                           </button>
                           <button
-                            onClick={() => handleApproveRequest(req.id)}
-                            disabled={isProcessing === req.id}
+                            onClick={() => handleApproveRequest(req)}
+                            disabled={isProcessing !== null}
                             className="bg-orange-600 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-orange-700 disabled:opacity-50"
                           >
                             {isProcessing === req.id ? "Processing..." : "Approve"}
@@ -374,7 +405,6 @@ export default function AdminDashboard() {
                     <tr key={item.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                       <td className="py-3 font-bold text-gray-900">{item.item_name}</td>
                       <td className="py-3 text-gray-600 text-sm">
-                        {/* THIS LINE IS UPDATED TO SHOW BOTH AVAILABLE AND TOTAL */}
                         <span className={`font-bold ${item.available_quantity > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                           {item.available_quantity} Available
                         </span> 

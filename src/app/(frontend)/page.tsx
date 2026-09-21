@@ -51,15 +51,13 @@ export default function HomePage() {
             <nav className="hidden lg:flex items-center gap-6">
               <Link href="/" className="text-sm font-black uppercase tracking-wider text-[#ccff00] italic">Home</Link>
               <Link href="/features/announcements" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Live Feed</Link>
-              <Link href="/features/department" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Department</Link>
+              <Link href="/features/department" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Gallery</Link>
               <Link href="/features/facilities" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Inventory</Link>
               <Link href="/features/request" className="text-sm font-bold uppercase tracking-wider text-[#ccff00] hover:text-white transition">Request Gear</Link>
             </nav>
 
             <div className="flex items-center gap-4">
-              <Link href="/login" className="hidden sm:flex items-center justify-center bg-[#6A00F4] text-white px-6 py-2 text-xs font-black uppercase tracking-widest -skew-x-6 hover:bg-[#ccff00] hover:text-black transition-all">
-                <span className="skew-x-6">Admin Portal</span>
-              </Link>
+              
               <button 
                 onClick={() => setIsMobileMenuOpen(true)} 
                 className="h-10 w-10 bg-white/10 text-white flex flex-col items-center justify-center gap-1.5 hover:bg-[#6A00F4] transition-colors lg:hidden -skew-x-6"
@@ -91,7 +89,7 @@ export default function HomePage() {
           {[
             ["/", "HOME"],
             ["/features/announcements", "LIVE FEED"],
-            ["/features/department", "DEPARTMENT"],
+            ["/features/department", "GALLERY"],
             ["/features/facilities", "INVENTORY"],
             ["/features/request", "REQUEST GEAR"],
           ].map(([href, label]) => (
@@ -102,11 +100,7 @@ export default function HomePage() {
             </Link>
           ))}
           
-          <div className="mt-8 pt-8 border-t border-white/10">
-             <Link href="/login" onClick={closeMenu} className="flex items-center justify-center w-full bg-[#ccff00] text-black px-6 py-4 text-sm font-black uppercase tracking-widest -skew-x-6 hover:bg-[#6A00F4] hover:text-white transition-all">
-                <span className="skew-x-6">Login to Portal</span>
-              </Link>
-          </div>
+          
         </nav>
       </aside>
 
@@ -116,7 +110,7 @@ export default function HomePage() {
       <main className="flex-grow pt-[70px]">
         
         {/* HERO SECTION */}
-        <section className="relative min-h-[600px] md:min-h-[70vh] flex items-center overflow-hidden border-b-8 border-slate-950">
+        <section className="relative min-h-[400px] md:min-h-[70vh] flex items-center overflow-hidden border-b-8 border-slate-950">
           <div className="absolute inset-0"><HeroCarousel /></div>
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
           <div className="absolute top-0 right-0 bottom-0 w-1/3 bg-[#6A00F4]/20 -skew-x-12 translate-x-20 pointer-events-none mix-blend-overlay" />
@@ -124,28 +118,21 @@ export default function HomePage() {
           <div className="relative z-10 w-full max-w-[1440px] mx-auto px-5 md:px-8 py-20">
             <div className="max-w-3xl">
               <div className="inline-block bg-[#ccff00] text-black px-4 py-1 -skew-x-6 mb-6">
-                <span className="block skew-x-6 text-[10px] md:text-xs uppercase tracking-[0.2em] font-black">
+                <span className="block skew-x-6 text-[9px] md:text-xs uppercase tracking-[0.2em] font-black">
                   Central Institute of Technology Kokrajhar
                 </span>
               </div>
 
-              <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-[100px] font-black leading-[0.85] tracking-tighter text-white uppercase italic">
+              <h1 className="text-4xl sm:text-7xl md:text-8xl lg:text-[100px] font-black leading-[0.85] tracking-tighter text-white uppercase italic">
                 Dominate <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6A00F4] to-purple-400">The Game.</span>
               </h1>
 
-              <p className="mt-8 max-w-xl text-sm md:text-base leading-relaxed text-slate-300 font-medium border-l-4 border-[#ccff00] pl-4">
+              <p className="mt-4 max-w-xl text-sm md:text-base leading-relaxed text-slate-300 font-small border-l-4 border-[#ccff00] pl-4">
                 Building a stronger campus through competition, teamwork, discipline, and the unbreakable spirit of sport. Your journey to excellence starts here.
               </p>
 
-              <div className="mt-10 flex flex-wrap gap-4">
-                <Link href="/features/request" className="bg-[#6A00F4] text-white px-8 py-4 text-sm font-black uppercase tracking-widest -skew-x-6 hover:bg-[#ccff00] hover:text-black transition-all">
-                  <span className="block skew-x-6">Request Gear</span>
-                </Link>
-                <Link href="/features/announcements" className="bg-white/10 backdrop-blur-md text-white border-2 border-white/20 px-8 py-4 text-sm font-black uppercase tracking-widest -skew-x-6 hover:bg-white hover:text-black transition-all">
-                  <span className="block skew-x-6">Live Feed</span>
-                </Link>
-              </div>
+              
             </div>
           </div>
         </section>
@@ -166,25 +153,12 @@ export default function HomePage() {
               <p>With a strong focus on fitness, teamwork, discipline, and excellence, the Sports Department continues to make sports an integral part of campus life and student experience at CIT Kokrajhar.</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mt-auto">
-              <div className="bg-slate-950 border-2 border-slate-950 p-6 -skew-x-3 text-center">
-                <div className="skew-x-3">
-                  <p className="text-4xl font-black text-[#ccff00] italic">{sportsItems.length}</p>
-                  <p className="text-[10px] font-black text-white uppercase tracking-widest mt-2">Equipment Types</p>
-                </div>
-              </div>
-              <div className="bg-[#6A00F4] border-2 border-[#6A00F4] p-6 -skew-x-3 text-center">
-                <div className="skew-x-3">
-                  <p className="text-4xl font-black text-white italic">{announcements.length}</p>
-                  <p className="text-[10px] font-black text-purple-200 uppercase tracking-widest mt-2">Active Notices</p>
-                </div>
-              </div>
-            </div>
+            
           </div>
 
           <div className="order-1 lg:order-2 bg-white border-2 border-slate-200 shadow-[4px_4px_0_0_rgba(15,23,42,1)] flex flex-col h-[450px] lg:h-auto">
             <h3 className="bg-slate-950 text-white font-black p-5 text-xl uppercase italic tracking-wide shrink-0 border-b-4 border-[#ccff00] flex items-center justify-between">
-              Live Feed <span className="text-xl">📢</span>
+              Live Feed <span className="text-xl"></span>
             </h3>
             
             <div className="p-4 space-y-4 overflow-y-auto flex-grow bg-slate-50">
@@ -252,13 +226,13 @@ export default function HomePage() {
                 <h4 className="text-xs font-black uppercase tracking-widest text-[#6A00F4] mb-4">Institute</h4>
                 <ul className="space-y-3 font-medium">
                   <li><a href="#" className="text-sm text-slate-400 hover:text-white transition">About CITK</a></li>
-                  <li><a href="#" className="text-sm text-slate-400 hover:text-white transition">Main Website</a></li>
+                  <li><Link href="https://cit.ac.in/" className="text-sm text-slate-400 hover:text-white transition">Main Website</Link></li>
                 </ul>
               </div>
               <div className="col-span-2 md:col-span-1">
                 <h4 className="text-xs font-black uppercase tracking-widest text-[#6A00F4] mb-4">Contact</h4>
                 <a href="mailto:webmaster@cit.ac.in" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition bg-white/5 px-4 py-3 border border-white/10 -skew-x-6">
-                  <span className="skew-x-6">✉ webmaster@cit.ac.in</span>
+                  <span className="skew-x-6">✉ citk2006@gmail.com</span>
                 </a>
               </div>
             </div>
@@ -268,9 +242,7 @@ export default function HomePage() {
             <p className="text-xs text-slate-500 font-medium">
               © {new Date().getFullYear()} Central Institute of Technology Kokrajhar. All rights reserved.
             </p>
-            <p className="text-xs text-slate-500 font-medium">
-              Engineered by <span className="text-white font-bold">Nitesh Kr Singh</span> <span className="text-slate-700 mx-1">|</span> CSE <span className="text-slate-700 mx-1">|</span> NAL-22-CS-003
-            </p>
+           
           </div>
         </div>
       </footer>
