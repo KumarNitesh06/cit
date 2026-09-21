@@ -25,6 +25,15 @@ export default function HomePage() {
     loadData();
   }, []);
 
+  // Helper to check if the announcement is less than 48 hours old
+  const isNew = (dateString: string) => {
+    if (!dateString) return false;
+    const postDate = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - postDate.getTime()) / (1000 * 60 * 60);
+    return diffInHours <= 48;
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 overflow-x-hidden flex flex-col font-sans selection:bg-[#ccff00] selection:text-black">
       
@@ -50,7 +59,7 @@ export default function HomePage() {
             {/* Desktop navigation */}
             <nav className="hidden lg:flex items-center gap-6">
               <Link href="/" className="text-sm font-black uppercase tracking-wider text-[#ccff00] italic">Home</Link>
-              <Link href="/features/announcements" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Live Feed</Link>
+              <Link href="/features/announcements" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Notices</Link>
               <Link href="/features/department" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Gallery</Link>
               <Link href="/features/facilities" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Inventory</Link>
               <Link href="/features/request" className="text-sm font-bold uppercase tracking-wider text-[#ccff00] hover:text-white transition">Request Gear</Link>
@@ -88,7 +97,7 @@ export default function HomePage() {
         <nav className="flex flex-col p-6 space-y-4 flex-grow">
           {[
             ["/", "HOME"],
-            ["/features/announcements", "LIVE FEED"],
+            ["/features/announcements", "NOTICES"],
             ["/features/department", "GALLERY"],
             ["/features/facilities", "INVENTORY"],
             ["/features/request", "REQUEST GEAR"],
@@ -109,29 +118,29 @@ export default function HomePage() {
       ========================== */}
       <main className="flex-grow pt-[70px]">
         
-        {/* HERO SECTION */}
+       {/* HERO SECTION */}
         <section className="relative min-h-[400px] md:min-h-[70vh] flex items-center overflow-hidden border-b-8 border-slate-950">
           <div className="absolute inset-0"><HeroCarousel /></div>
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
           <div className="absolute top-0 right-0 bottom-0 w-1/3 bg-[#6A00F4]/20 -skew-x-12 translate-x-20 pointer-events-none mix-blend-overlay" />
 
-          <div className="relative z-10 w-full max-w-[1440px] mx-auto px-5 md:px-8 py-20">
-            <div className="max-w-3xl">
-              <div className="inline-block bg-[#ccff00] text-black px-4 py-1 -skew-x-6 mb-6">
+          <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 md:px-12 py-20">
+            <div className="max-w-3xl flex flex-col items-start">
+              
+              <div className="inline-block bg-[#ccff00] text-black pl-6 pr-4 py-1.5 -skew-x-6 mb-8 ml-1">
                 <span className="block skew-x-6 text-[9px] md:text-xs uppercase tracking-[0.2em] font-black">
                   Central Institute of Technology Kokrajhar
                 </span>
               </div>
 
               <h1 className="text-4xl sm:text-7xl md:text-8xl lg:text-[100px] font-black leading-[0.85] tracking-tighter text-white uppercase italic">
-                Dominate <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6A00F4] to-purple-400">The Game.</span>
+                PLAY <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6A00F4] to-purple-400">TO WIN.</span>
               </h1>
 
-              <p className="mt-4 max-w-xl text-sm md:text-base leading-relaxed text-slate-300 font-small border-l-4 border-[#ccff00] pl-4">
-                Building a stronger campus through competition, teamwork, discipline, and the unbreakable spirit of sport. Your journey to excellence starts here.
+              <p className="mt-8 max-w-xl text-sm md:text-base leading-relaxed text-slate-300 font-medium border-l-4 border-[#ccff00] pl-5 ml-1">
+               Forging campus unity through strategy, and sportsmanship. Access the sports arsenal, hit the ground running, and leave your legacy.
               </p>
-
               
             </div>
           </div>
@@ -158,20 +167,37 @@ export default function HomePage() {
 
           <div className="order-1 lg:order-2 bg-white border-2 border-slate-200 shadow-[4px_4px_0_0_rgba(15,23,42,1)] flex flex-col h-[450px] lg:h-auto">
             <h3 className="bg-slate-950 text-white font-black p-5 text-xl uppercase italic tracking-wide shrink-0 border-b-4 border-[#ccff00] flex items-center justify-between">
-              Live Feed <span className="text-xl"></span>
+              Notices <span className="text-xl"></span>
             </h3>
             
             <div className="p-4 space-y-4 overflow-y-auto flex-grow bg-slate-50">
-              {announcements.slice(0, 5).map((ann) => (
-                <div key={ann.id} className="border-b-2 border-slate-200 pb-4 group">
-                  <div className="inline-block bg-slate-200 text-slate-600 px-2 py-0.5 -skew-x-6 mb-2">
-                    <p className="skew-x-6 text-[9px] font-black uppercase tracking-widest">{new Date(ann.date_posted).toLocaleDateString()}</p>
+              {announcements.slice(0, 5).map((ann) => {
+                const timestamp = ann.created_at || ann.date_posted;
+                const showNewBadge = isNew(timestamp);
+
+                return (
+                  <div key={ann.id} className="border-b-2 border-slate-200 pb-4 group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="inline-block bg-slate-200 text-slate-600 px-2 py-0.5 -skew-x-6">
+                        <p className="skew-x-6 text-[9px] font-black uppercase tracking-widest">
+                          {new Date(ann.date_posted).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      </div>
+                      
+                      {/* NEW BADGE */}
+                      {showNewBadge && (
+                        <span className="bg-red-500 text-white px-2 py-0.5 text-[9px] font-black uppercase tracking-widest -skew-x-6 animate-pulse">
+                          <span className="skew-x-6 block">🔥 NEW</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <h4 className="text-base font-black text-slate-900 group-hover:text-[#6A00F4] transition-colors cursor-pointer leading-snug">
+                      {ann.title}
+                    </h4>
                   </div>
-                  <h4 className="text-base font-black text-slate-900 group-hover:text-[#6A00F4] transition-colors cursor-pointer leading-snug">
-                    {ann.title}
-                  </h4>
-                </div>
-              ))}
+                );
+              })}
               {announcements.length === 0 && (
                 <p className="text-slate-400 font-bold text-center mt-10">No active updates.</p>
               )}
@@ -219,13 +245,13 @@ export default function HomePage() {
                   <li><Link href="/" className="text-sm text-slate-400 hover:text-white transition">Home</Link></li>
                   <li><Link href="/features/announcements" className="text-sm text-slate-400 hover:text-white transition">Live Feed</Link></li>
                   <li><Link href="/features/facilities" className="text-sm text-slate-400 hover:text-white transition">Inventory</Link></li>
-                  <li><Link href="/login" className="text-sm text-slate-400 hover:text-[#ccff00] transition">Admin Login</Link></li>
+                  
                 </ul>
               </div>
               <div>
                 <h4 className="text-xs font-black uppercase tracking-widest text-[#6A00F4] mb-4">Institute</h4>
                 <ul className="space-y-3 font-medium">
-                  <li><a href="#" className="text-sm text-slate-400 hover:text-white transition">About CITK</a></li>
+                  
                   <li><Link href="https://cit.ac.in/" className="text-sm text-slate-400 hover:text-white transition">Main Website</Link></li>
                 </ul>
               </div>
