@@ -13,7 +13,7 @@ export default function AnnouncementsPage() {
       const { data, error } = await supabase
         .from("announcements")
         .select("*")
-        .order("date_posted", { ascending: false }); // Switched back to date_posted
+        .order("date_posted", { ascending: false }); 
       
       if (error) {
         console.error("Supabase Error:", error.message);
@@ -27,7 +27,6 @@ export default function AnnouncementsPage() {
     fetchAnnouncements();
   }, []);
 
-  // Helper to render the correct emoji
   const renderIcon = (type: string) => {
     switch (type) {
       case "trophy": return "🏆";
@@ -37,7 +36,6 @@ export default function AnnouncementsPage() {
     }
   };
 
-  // Helper to check if the announcement is less than 48 hours old
   const isNew = (dateString: string) => {
     const postDate = new Date(dateString);
     const now = new Date();
@@ -55,7 +53,6 @@ export default function AnnouncementsPage() {
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 border-b-4 border-slate-950 pb-4 mb-12">
           <div>
-            
             <h1 className="mt-1 text-4xl md:text-4xl font-black tracking-tighter uppercase italic text-slate-950">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6A00F4] to-purple-400">Notices</span>
             </h1>
@@ -74,20 +71,18 @@ export default function AnnouncementsPage() {
         ) : (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {announcements.map((ann) => {
-              // We use created_at if available for exact timing, otherwise fallback to date_posted
               const timestamp = ann.created_at || ann.date_posted;
               const showNewBadge = isNew(timestamp);
 
               return (
                 <div 
                   key={ann.id} 
-                  className="group relative bg-white border-2 border-slate-200 p-6 md:p-8 rounded-2xl shadow-[4px_4px_0_0_rgba(15,23,42,1)] hover:shadow-[6px_6px_0_0_rgba(106,0,244,1)] hover:-translate-y-1 transition-all flex flex-col md:flex-row gap-6"
+                  className="group relative bg-white border-2 border-slate-200 p-6 md:p-8 rounded-2xl shadow-[4px_4px_0_0_rgba(15,23,42,1)] hover:shadow-[6px_6px_0_0_rgba(106,0,244,1)] hover:-translate-y-1 transition-all flex flex-col md:flex-row gap-5 md:gap-6"
                 >
                   {/* Icon Box */}
                   <div className="shrink-0 w-16 h-16 bg-slate-50 border-2 border-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-[#ccff00] group-hover:border-[#ccff00] transition-colors relative">
                     {renderIcon(ann.icon_type)}
                     
-                    {/* Optional: Add a little ping indicator on the icon if it's new */}
                     {showNewBadge && (
                       <span className="absolute -top-1 -right-1 flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -97,22 +92,11 @@ export default function AnnouncementsPage() {
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
-                      <div className="flex items-center gap-3">
-                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-tight">
-                          {ann.title}
-                        </h2>
-                        
-                        {/* THE "NEW" BADGE */}
-                        {showNewBadge && (
-                          <span className="bg-red-500 text-white px-2 py-0.5 text-[10px] font-black uppercase tracking-widest -skew-x-6 animate-pulse shrink-0">
-                            <span className="skew-x-6 block">🔥 NEW</span>
-                          </span>
-                        )}
-                      </div>
-                      
-                      <span className="inline-block bg-slate-950 text-[#ccff00] px-3 py-1 text-[10px] font-black uppercase tracking-widest -skew-x-6 w-max sm:ml-auto">
+                  <div className="flex-1 min-w-0">
+                    
+                    {/* Badges Row (Date and NEW flag isolated from title) */}
+                    <div className="flex flex-wrap items-center gap-3 mb-3">
+                      <span className="inline-block bg-slate-950 text-[#ccff00] px-3 py-1 text-[10px] font-black uppercase tracking-widest -skew-x-6 w-max">
                         <span className="skew-x-6 block">
                           {new Date(timestamp).toLocaleDateString(undefined, {
                             year: 'numeric',
@@ -121,11 +105,22 @@ export default function AnnouncementsPage() {
                           })}
                         </span>
                       </span>
+
+                      {showNewBadge && (
+                        <span className="bg-red-500 text-white px-2 py-0.5 text-[10px] font-black uppercase tracking-widest -skew-x-6 animate-pulse shrink-0">
+                          <span className="skew-x-6 block">🔥 NEW</span>
+                        </span>
+                      )}
                     </div>
+
+                    {/* Title with automatic spaces injected after commas */}
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-tight break-words">
+                      {ann.title.replace(/,/g, ', ')}
+                    </h2>
                     
-                    <p className="text-slate-600 font-medium leading-relaxed mt-4">
-                      {ann.description}
-                    </p>
+                    <p className="text-slate-600 font-medium leading-relaxed mt-3 break-words">
+  {ann.description?.replace(/,/g, ', ')}
+</p>
                   </div>
                 </div>
               );

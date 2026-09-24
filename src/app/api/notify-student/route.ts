@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const headerText = isApproved ? "#000" : "#fff";
 
     const messageHtml = isApproved 
-      ? `Good news! Your request for <strong>${data.quantity}x ${data.item_name}</strong> has been approved. <br/><br/><strong>Next Step:</strong> Please bring your physical CITK Student ID card to the sports department to collect your gear.`
+      ? `Good news! Your request for <strong>${data.quantity}x ${data.item_name}</strong> has been approved. <br/><br/><strong>Next Step:</strong> Please bring your physical CITK Student ID card to the sports committee to collect your gear.`
       : `Unfortunately, your request for <strong>${data.quantity}x ${data.item_name}</strong> has been rejected. This may be due to depleted stock or an invalid request format.`;
 
     const mailOptions = {
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
             <p style="color: #333; font-size: 15px; line-height: 1.5;">${messageHtml}</p>
             <hr style="border: none; border-top: 2px dashed #000; margin: 20px 0;" />
             <p style="font-size: 12px; color: #666; font-weight: bold; text-transform: uppercase;">
-              Central Institute of Technology Kokrajhar - Sports Department
+              Central Institute of Technology Kokrajhar - Sports Committee
             </p>
           </div>
         </div>

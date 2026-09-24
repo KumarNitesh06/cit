@@ -184,7 +184,7 @@ export default function AdminDashboard() {
 
     const { error } = await supabase.from("issued_items").insert([{
         student_name: studentName, roll_no: rollNo, semester: semester, 
-        branch: branch, phone_number: phone, item_issued: issuedItem, quantity: reqQty, status: 'active'
+        branch: branch, phone_number: phone, item_issued: issuedItem, quantity: reqQty, status: 'active',issue_date: new Date().toISOString()
     }]);
 
     if (error) setIssueStatus("❌ Error saving record.");
@@ -438,9 +438,13 @@ export default function AdminDashboard() {
                     <input type="text" required value={semester} onChange={(e) => setSemester(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm" placeholder="Semester" />
                     <input type="text" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm lg:col-span-1" placeholder="Phone" />
                     <select required value={issuedItem} onChange={(e) => setIssuedItem(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm lg:col-span-2 bg-white">
-                      <option value="" disabled>Select Item to Issue...</option>
-                      {inventory.map(item => <option key={item.id} value={item.item_name}>{item.item_name} ({item.available_quantity} available)</option>)}
-                    </select>
+  <option value="" disabled>Select Item to Issue...</option>
+  {inventory.map(item => (
+    <option key={item.id} value={item.item_name}>
+      {item.item_name} - {item.category || 'General'} ({item.available_quantity} available)
+    </option>
+  ))}
+</select>
                     <input type="number" required min="1" value={issueQuantity} onChange={(e) => setIssueQuantity(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm lg:col-span-1" placeholder="Qty" />
                     <div className="md:col-span-2 lg:col-span-4 flex items-center gap-4 mt-2">
                       <button type="submit" className="bg-purple-600 text-white px-6 md:px-8 py-3 rounded-md text-sm font-bold hover:bg-purple-700 transition-colors w-full md:w-auto">Issue Record Now</button>
@@ -458,7 +462,12 @@ export default function AdminDashboard() {
                         {issuedRecords.length > 0 ? issuedRecords.map((record) => (
                           <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                             <td className="p-4 font-medium text-gray-900">{record.student_name}</td>
-                            <td className="p-4 text-gray-600">{record.roll_no} • {record.branch}</td>
+                            <td className="p-4 text-gray-600">
+  {record.roll_no} • {record.branch} <br/>
+  <span className="text-xs font-medium text-[#6A00F4] mt-1 inline-block">
+    📞 {record.phone_number || "N/A"}
+  </span>
+</td>
                             <td className="p-4 font-bold text-purple-700">{record.item_issued} (x{record.quantity || 1})</td>
                             <td className="p-4 text-right"><button onClick={() => handleReturnEquipment(record)} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded text-xs font-bold hover:bg-emerald-600 hover:text-white transition-colors">Mark Returned</button></td>
                           </tr>
@@ -549,18 +558,39 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {issueHistory.length > 0 ? issueHistory.map((log) => (
-                          <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="p-4">
-                              <span className="text-xs text-gray-500">Issued: {new Date(log.issue_date).toLocaleDateString()}</span><br/>
-                              <span className="text-sm font-bold text-gray-900">Returned: {log.returned_at ? new Date(log.returned_at).toLocaleString() : 'N/A'}</span>
-                            </td>
-                            <td className="p-4"><span className="font-bold text-gray-900">{log.student_name}</span> <br/><span className="text-xs text-gray-500">{log.roll_no} • {log.branch}</span></td>
-                            <td className="p-4 font-bold text-purple-700">{log.quantity}x {log.item_issued}</td>
-                            <td className="p-4 text-right"><span className="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-700">Returned</span></td>
-                          </tr>
-                        )) : <tr><td colSpan={4} className="p-12 text-center text-gray-400 font-medium">No returned equipment logs available.</td></tr>}
-                      </tbody>
+  {issueHistory.length > 0 ? issueHistory.map((log) => (
+    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+      
+      <td className="p-4">
+        <span className="text-xs text-gray-500">Issued: {new Date(log.issue_date).toLocaleDateString()}</span><br/>
+        <span className="text-sm font-bold text-gray-900">Returned: {log.returned_at ? new Date(log.returned_at).toLocaleString() : 'N/A'}</span>
+      </td>
+      
+      <td className="p-4">
+        <span className="font-bold text-gray-900">{log.student_name}</span> <br/>
+        <span className="text-xs text-gray-500 font-medium">
+          {log.roll_no} • {log.branch} <br/>
+          <span className="text-[#6A00F4] mt-1 inline-block">📞 {log.phone_number || "N/A"}</span>
+        </span>
+      </td>
+      
+      <td className="p-4 font-bold text-purple-700">
+        {log.quantity}x {log.item_issued}
+      </td>
+      
+      <td className="p-4 text-right">
+        <span className="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-700">Returned</span>
+      </td>
+      
+    </tr>
+  )) : (
+    <tr>
+      <td colSpan={4} className="p-12 text-center text-gray-400 font-medium">
+        No returned equipment logs available.
+      </td>
+    </tr>
+  )}
+</tbody>
                     </table>
                   </div>
                 </div>

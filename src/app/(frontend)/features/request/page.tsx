@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
@@ -12,84 +12,36 @@ interface RequestRow {
   max_quantity: number;
 }
 
-// ==========================================
-// CUSTOM SEARCHABLE DROPDOWN COMPONENT
-// ==========================================
-const SearchableDropdown = ({ 
-  items, 
-  selectedId, 
-  onSelect 
-}: { 
-  items: any[], 
-  selectedId: string, 
-  onSelect: (id: string) => void 
-}) => {
+const SearchableDropdown = ({ items, selectedId, onSelect }: { items: any[], selectedId: string, onSelect: (id: string) => void }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const selectedItem = items.find(i => i.id === selectedId);
-
-  // Filter items based on name or category
   const filteredItems = items.filter(item => 
     item.item_name.toLowerCase().includes(search.toLowerCase()) || 
     (item.category && item.category.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
-    <div 
-      className="relative w-full" 
-      tabIndex={-1} 
-      onBlur={(e) => {
-        // Close dropdown if user clicks outside of it
-        if (!e.currentTarget.contains(e.relatedTarget)) setIsOpen(false);
-      }}
-    >
-      <div 
-        onClick={() => setIsOpen(!isOpen)} 
-        className="w-full bg-white border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 hover:border-[#6A00F4] transition-colors cursor-pointer flex justify-between items-center"
-      >
+    <div className="relative w-full" tabIndex={-1} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setIsOpen(false); }}>
+      <div onClick={() => setIsOpen(!isOpen)} className="w-full bg-white border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 hover:border-[#6A00F4] transition-colors cursor-pointer flex justify-between items-center">
         <span className={selectedItem ? "text-slate-900" : "text-slate-400"}>
-          {selectedItem 
-            ? `${selectedItem.item_name} - ${selectedItem.category || 'General'} (${selectedItem.available_quantity} Available)` 
-            : "Search & Select Equipment..."}
+          {selectedItem ? `${selectedItem.item_name} - ${selectedItem.category || 'General'} (${selectedItem.available_quantity} Available)` : "Search & Select Equipment..."}
         </span>
         <span className={`text-xs transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
       </div>
-
       {isOpen && (
         <div className="absolute z-50 w-full mt-2 bg-white border-2 border-slate-950 shadow-[4px_4px_0_0_#6A00F4] max-h-72 overflow-y-auto">
           <div className="p-2 sticky top-0 bg-white border-b-2 border-slate-100 z-10">
-            <input 
-              type="text" 
-              autoFocus 
-              placeholder="Type to search (e.g., 'Bat' or 'Cricket')..." 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              className="w-full p-2.5 border-2 border-slate-200 text-sm font-bold focus:border-[#ccff00] focus:ring-0 outline-none transition-colors" 
-            />
-          </div>
+<input type="text" autoFocus placeholder="Type to search..." value={search} onChange={e => setSearch(e.target.value)} className="w-full p-2.5 border-2 border-slate-200 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#ccff00] focus:ring-0 outline-none transition-colors" />          </div>
           <div className="py-1">
             {filteredItems.map(item => (
-              <div 
-                key={item.id} 
-                onClick={() => { 
-                  onSelect(item.id); 
-                  setIsOpen(false); 
-                  setSearch(""); 
-                }} 
-                className="px-4 py-3 hover:bg-slate-950 hover:text-[#ccff00] cursor-pointer text-sm font-bold text-slate-700 transition-colors flex justify-between items-center group"
-              >
+              <div key={item.id} onClick={() => { onSelect(item.id); setIsOpen(false); setSearch(""); }} className="px-4 py-3 hover:bg-slate-950 hover:text-[#ccff00] cursor-pointer text-sm font-bold text-slate-700 transition-colors flex justify-between items-center group">
                 <span>{item.item_name} <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300 ml-1">• {item.category || 'General'}</span></span>
-                <span className="text-[#6A00F4] group-hover:text-white font-black text-xs bg-slate-100 group-hover:bg-white/20 px-2 py-1 rounded">
-                  {item.available_quantity} left
-                </span>
+                <span className="text-[#6A00F4] group-hover:text-white font-black text-xs bg-slate-100 group-hover:bg-white/20 px-2 py-1 rounded">{item.available_quantity} left</span>
               </div>
             ))}
-            {filteredItems.length === 0 && (
-              <div className="px-4 py-6 text-center text-sm text-slate-400 font-bold">
-                No gear found matching "{search}"
-              </div>
-            )}
+            {filteredItems.length === 0 && <div className="px-4 py-6 text-center text-sm text-slate-400 font-bold">No gear found matching "{search}"</div>}
           </div>
         </div>
       )}
@@ -97,26 +49,17 @@ const SearchableDropdown = ({
   );
 };
 
-
-// ==========================================
-// MAIN PAGE COMPONENT
-// ==========================================
 export default function RequestGearPage() {
   const [sportsItems, setSportsItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // 1. ADDED PHONE TO STATE
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    rollNo: "",
-    branch: "",
-    semester: "1",
+    name: "", email: "", phone: "", rollNo: "", branch: "", semester: "1",
   });
 
-  const [requestedItems, setRequestedItems] = useState<RequestRow[]>([
-    { id: Date.now(), item_id: "", item_name: "", quantity: 1, max_quantity: 1 }
-  ]);
+  const [requestedItems, setRequestedItems] = useState<RequestRow[]>([{ id: Date.now(), item_id: "", item_name: "", quantity: 1, max_quantity: 1 }]);
 
   useEffect(() => {
     async function loadInventory() {
@@ -130,47 +73,29 @@ export default function RequestGearPage() {
   const handleItemSelect = (rowId: number, selectedItemId: string) => {
     const itemData = sportsItems.find(i => i.id === selectedItemId);
     if (!itemData) return;
-
-    setRequestedItems(prev => prev.map(row => 
-      row.id === rowId 
-        ? { ...row, item_id: itemData.id, item_name: itemData.item_name, max_quantity: itemData.available_quantity, quantity: 1 }
-        : row
-    ));
+    setRequestedItems(prev => prev.map(row => row.id === rowId ? { ...row, item_id: itemData.id, item_name: itemData.item_name, max_quantity: itemData.available_quantity, quantity: 1 } : row));
   };
 
   const handleQuantityChange = (rowId: number, qty: number | string) => {
-    setRequestedItems(prev => prev.map(row => 
-      row.id === rowId ? { ...row, quantity: qty } : row
-    ));
+    setRequestedItems(prev => prev.map(row => row.id === rowId ? { ...row, quantity: qty } : row));
   };
 
-  const addRow = () => {
-    setRequestedItems([...requestedItems, { id: Date.now(), item_id: "", item_name: "", quantity: 1, max_quantity: 1 }]);
-  };
-
-  const removeRow = (rowId: number) => {
-    if (requestedItems.length > 1) {
-      setRequestedItems(requestedItems.filter(row => row.id !== rowId));
-    }
-  };
+  const addRow = () => setRequestedItems([...requestedItems, { id: Date.now(), item_id: "", item_name: "", quantity: 1, max_quantity: 1 }]);
+  const removeRow = (rowId: number) => { if (requestedItems.length > 1) setRequestedItems(requestedItems.filter(row => row.id !== rowId)); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Strict Official Email Validation
-    if (!formData.email.toLowerCase().endsWith("@cit.ac.in")) {
-      return alert("ACCESS DENIED: You must use your official @cit.ac.in institute email address to request gear.");
-    }
-
+    if (!formData.email.toLowerCase().endsWith("@cit.ac.in")) return alert("ACCESS DENIED: You must use your official @cit.ac.in institute email address to request gear.");
     const validItems = requestedItems.filter(item => item.item_id !== "" && Number(item.quantity) > 0);
     if (validItems.length === 0) return alert("Please select at least one item to request.");
-    
     setIsSubmitting(true);
 
     try {
+      // 2. ADDED PHONE_NUMBER TO PAYLOAD
       const rowsToInsert = validItems.map(item => ({
         student_name: formData.name,
         student_email: formData.email,
+        phone_number: formData.phone,
         roll_no: formData.rollNo,
         branch: formData.branch,
         semester: parseInt(formData.semester),
@@ -185,54 +110,40 @@ export default function RequestGearPage() {
       const emailResponse = await fetch('/api/notify-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          student_name: formData.name,
-          roll_no: formData.rollNo,
-          branch: formData.branch,
-          semester: formData.semester,
-          requested_items: validItems
-        })
+        body: JSON.stringify({ student_name: formData.name, roll_no: formData.rollNo, branch: formData.branch, semester: formData.semester, requested_items: validItems })
       });
 
       if (!emailResponse.ok) throw new Error("Failed to send email notification");
 
       alert("All requests sent successfully! Watch your @cit.ac.in inbox for admin approval.");
       setRequestedItems([{ id: Date.now(), item_id: "", item_name: "", quantity: 1, max_quantity: 1 }]); 
-      setFormData({ name: "", email: "", rollNo: "", branch: "", semester: "1" });
-      
-    } catch (error: any) {
-      alert(error.message || "An error occurred while submitting your requests.");
-    } finally {
-      setIsSubmitting(false);
-    }
+      setFormData({ name: "", email: "", phone: "", rollNo: "", branch: "", semester: "1" });
+    } catch (error: any) { alert(error.message || "An error occurred while submitting your requests."); } 
+    finally { setIsSubmitting(false); }
   };
 
   return (
     <div className="min-h-screen bg-slate-100 py-28 px-5 md:px-8 font-sans selection:bg-[#ccff00] selection:text-black">
       <div className="max-w-[800px] mx-auto">
-        
         <Link href="/" className="text-[#6A00F4] font-black text-sm uppercase tracking-widest hover:text-slate-900 transition-colors mb-8 inline-block -skew-x-6">
           <span className="skew-x-6">← BACK TO COMMAND CENTER</span>
         </Link>
-        
         <div className="border-b-4 border-slate-950 pb-6 mb-12">
           <p className="text-[10px] uppercase tracking-[.3em] font-black text-[#6A00F4]">Issue Portal</p>
           <h1 className="mt-2 text-4xl md:text-6xl font-black tracking-tighter uppercase italic text-slate-950">
             Request <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6A00F4] to-purple-400">Gear.</span>
           </h1>
-          <p className="mt-4 max-w-lg text-sm text-slate-500 leading-relaxed font-medium">
-            Select multiple items below and submit your reservation to the sports department in one go.
-          </p>
+          <p className="mt-4 max-w-lg text-sm text-slate-500 leading-relaxed font-medium">Select multiple items below and submit your reservation to the sports department in one go.</p>
         </div>
 
         {isLoading ? (
           <div className="text-center py-20 font-black text-slate-400 uppercase tracking-widest animate-pulse">Establishing Connection...</div>
         ) : (
           <form onSubmit={handleSubmit} className="bg-white border-2 border-slate-200 p-6 md:p-10 shadow-[4px_4px_0_0_rgba(15,23,42,1)]">
-            
-            {/* Identity Form Blocks... */}
             <div className="mb-10">
               <h2 className="text-xl font-black text-slate-950 uppercase italic tracking-tighter mb-4 border-b-2 border-slate-100 pb-2">Student Identity</h2>
+              
+              {/* 3. UPDATED GRID LAYOUT TO INCLUDE PHONE NUMBER */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Full Name</label>
@@ -240,13 +151,17 @@ export default function RequestGearPage() {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">CITK Email</label>
-                  <input type="email" required placeholder="e.g. u24csel0000@cit.ac.in" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                  <input type="email" required placeholder="e.g. rahul@cit.ac.in" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Phone Number</label>
+                  <input type="tel" required placeholder="e.g. 9876543210" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Roll Number</label>
-                  <input type="text" required placeholder="e.g. 202402022000" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.rollNo} onChange={(e) => setFormData({...formData, rollNo: e.target.value})} />
+                  <input type="text" required placeholder="e.g. NAL-26-CS-001" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.rollNo} onChange={(e) => setFormData({...formData, rollNo: e.target.value})} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="md:col-span-2 grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Branch</label>
                     <input type="text" required placeholder="e.g. CSE" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors uppercase" value={formData.branch} onChange={(e) => setFormData({...formData, branch: e.target.value})} />
@@ -261,70 +176,38 @@ export default function RequestGearPage() {
               </div>
             </div>
 
-            {/* GEAR LOADOUT SECTION WITH SEARCHABLE DROPDOWN */}
+            {/* Gear Loadout */}
             <div className="mb-10">
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-2 mb-4">
                 <h2 className="text-xl font-black text-slate-950 uppercase italic tracking-tighter">Gear Loadout</h2>
                 <button type="button" onClick={addRow} className="text-xs font-black text-[#6A00F4] uppercase tracking-widest hover:text-slate-900 transition-colors">+ Add Gear</button>
               </div>
-
               <div className="space-y-4">
                 {requestedItems.map((row, index) => (
                   <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-slate-50 p-4 border-2 border-slate-100">
-                    
                     <div className="w-full sm:flex-grow relative z-20">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Item #{index + 1}</label>
-                      {/* REPLACED STANDARD SELECT WITH CUSTOM SEARCHABLE SELECT */}
-                      <SearchableDropdown 
-                        items={sportsItems} 
-                        selectedId={row.item_id} 
-                        onSelect={(id) => handleItemSelect(row.id, id)} 
-                      />
+                      <SearchableDropdown items={sportsItems} selectedId={row.item_id} onSelect={(id) => handleItemSelect(row.id, id)} />
                     </div>
-                    
                     <div className="w-full sm:w-24 shrink-0 relative z-10">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Qty</label>
-                      <input 
-                        type="number" 
-                        min="1" 
-                        max={row.max_quantity}
-                        disabled={row.item_id === ""}
-                        className="w-full bg-white border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 focus:border-[#6A00F4] focus:outline-none transition-colors"
-                        value={row.quantity}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          handleQuantityChange(row.id, isNaN(val) ? "" : val);
-                        }}
-                      />
+                      <input type="number" min="1" max={row.max_quantity} disabled={row.item_id === ""} className="w-full bg-white border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 focus:border-[#6A00F4] focus:outline-none transition-colors" value={row.quantity} onChange={(e) => { const val = parseInt(e.target.value); handleQuantityChange(row.id, isNaN(val) ? "" : val); }} />
                     </div>
-
-                    <button type="button" onClick={() => removeRow(row.id)} className={`relative z-10 w-full sm:w-12 h-[48px] flex items-center justify-center border-2 border-slate-200 bg-white hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors ${requestedItems.length === 1 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={requestedItems.length === 1}>
-                      ✕
-                    </button>
+                    <button type="button" onClick={() => removeRow(row.id)} className={`relative z-10 w-full sm:w-12 h-[48px] flex items-center justify-center border-2 border-slate-200 bg-white hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors ${requestedItems.length === 1 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={requestedItems.length === 1}>✕</button>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* MANDATORY ID WARNING BLOCK */}
+            {/* Warning Block */}
             <div className="mb-10 relative overflow-hidden bg-slate-950 p-6 md:p-8 border-4 border-[#ccff00] shadow-[8px_8px_0_0_#6A00F4] -skew-x-2 group transition-all hover:-translate-y-1">
-              <div className="absolute -right-4 -top-8 text-[120px] font-black text-white/5 italic select-none pointer-events-none group-hover:text-[#6A00F4]/10 transition-colors">
-                ID
-              </div>
+              <div className="absolute -right-4 -top-8 text-[120px] font-black text-white/5 italic select-none pointer-events-none group-hover:text-[#6A00F4]/10 transition-colors">ID</div>
               <div className="skew-x-2 relative z-10 flex flex-col sm:flex-row gap-5 items-center sm:items-start text-center sm:text-left">
-                <div className="shrink-0 bg-[#ccff00] text-black w-16 h-16 flex items-center justify-center border-2 border-black shadow-[4px_4px_0_0_#6A00F4] -skew-x-6 animate-[pulse_3s_ease-in-out_infinite]">
-                  <span className="skew-x-6 text-3xl">⚠️</span>
-                </div>
+                <div className="shrink-0 bg-[#ccff00] text-black w-16 h-16 flex items-center justify-center border-2 border-black shadow-[4px_4px_0_0_#6A00F4] -skew-x-6 animate-[pulse_3s_ease-in-out_infinite]"><span className="skew-x-6 text-3xl">⚠️</span></div>
                 <div>
-                  <h3 className="font-black text-xl uppercase tracking-widest text-[#ccff00] mb-3">
-                    Mandatory Verification
-                  </h3>
+                  <h3 className="font-black text-xl uppercase tracking-widest text-[#ccff00] mb-3">Mandatory Verification</h3>
                   <p className="font-bold text-sm md:text-base leading-relaxed text-gray-300">
-                    This portal secures your reservation. You 
-                    <span className="text-black bg-[#ccff00] px-2 py-0.5 mx-1.5 uppercase tracking-widest border border-black shadow-[2px_2px_0_0_#6A00F4]">MUST</span> 
-                    present your physical 
-                    <span className="text-white underline decoration-[#6A00F4] decoration-4 underline-offset-4 mx-1">CITK Student ID</span> 
-                    card to the admin to collect your equipment. Requests made under false identities will be instantly voided.
+                    This portal secures your reservation. You <span className="text-black bg-[#ccff00] px-2 py-0.5 mx-1.5 uppercase tracking-widest border border-black shadow-[2px_2px_0_0_#6A00F4]">MUST</span> present your physical <span className="text-white underline decoration-[#6A00F4] decoration-4 underline-offset-4 mx-1">CITK Student ID</span> card to the admin to collect your equipment. Requests made under false identities will be instantly voided.
                   </p>
                 </div>
               </div>
