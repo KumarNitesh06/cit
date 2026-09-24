@@ -155,11 +155,11 @@ export default function RequestGearPage() {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Phone Number</label>
-                  <input type="tel" required placeholder="e.g. 9876543210" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                  <input type="tel" required placeholder="e.g. 987654xxxx" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Roll Number</label>
-                  <input type="text" required placeholder="e.g. NAL-26-CS-001" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.rollNo} onChange={(e) => setFormData({...formData, rollNo: e.target.value})} />
+                  <input type="text" required placeholder="e.g. 202402022000" className="w-full bg-slate-50 border-2 border-slate-200 p-3 text-sm font-bold text-slate-900 placeholder-slate-400 focus:border-[#6A00F4] focus:outline-none transition-colors" value={formData.rollNo} onChange={(e) => setFormData({...formData, rollNo: e.target.value})} />
                 </div>
                 <div className="md:col-span-2 grid grid-cols-2 gap-4">
                   <div>
