@@ -370,7 +370,6 @@ export default function AdminDashboard() {
                     <div className={`rounded-xl p-4 md:p-6 border shadow-sm transition-colors ${editingItemId ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-100'}`}>
                       <h2 className={`text-xl font-bold mb-4 ${editingItemId ? 'text-yellow-900' : 'text-blue-900'}`}>{editingItemId ? "✏️ Edit Item" : "➕ Add Item"}</h2>
                       <form onSubmit={handleSaveItem} className="space-y-4">
-                        <input type="text" required value={itemName} onChange={(e) => setItemName(e.target.value)} className="w-full border border-gray-200 rounded-md p-3 text-sm" placeholder="Item Name (e.g. Bat)" />
                         <div className="flex gap-2">
                           {!showCustomCategory ? (
                             <select required value={category} onChange={(e) => { if (e.target.value === "ADD_NEW") { setShowCustomCategory(true); setCategory(""); } else setCategory(e.target.value); }} className="w-full border border-gray-200 rounded-md p-3 text-sm bg-white font-medium">
@@ -385,6 +384,7 @@ export default function AdminDashboard() {
                             </div>
                           )}
                         </div>
+                        <input type="text" required value={itemName} onChange={(e) => setItemName(e.target.value)} className="w-full border border-gray-200 rounded-md p-3 text-sm" placeholder="Item Name (e.g. Bat)" />
                         <input type="number" required min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="w-full border border-gray-200 rounded-md p-3 text-sm" placeholder="Total Quantity (e.g. 10)" />
                         <div className="flex gap-2 pt-2">
                           <button type="submit" className={`flex-1 text-white px-4 py-3 rounded-md text-sm font-bold transition-colors ${editingItemId ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'}`}>{editingItemId ? "Update" : "Save Item"}</button>
@@ -400,12 +400,15 @@ export default function AdminDashboard() {
                     <div className="p-0 overflow-x-auto">
                       <table className="w-full text-left text-sm whitespace-nowrap">
                         <thead className="bg-white border-b border-gray-100">
-                          <tr className="text-gray-500"><th className="p-4 font-semibold">Item & Category</th><th className="p-4 font-semibold">Stock Level</th><th className="p-4 font-semibold text-right">Actions</th></tr>
+                          <tr className="text-gray-500"><th className="p-4 font-semibold">Category & Item</th><th className="p-4 font-semibold">Stock Level</th><th className="p-4 font-semibold text-right">Actions</th></tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {inventory.map((item) => (
                             <tr key={item.id} className={`hover:bg-gray-50 ${editingItemId === item.id ? 'bg-yellow-50' : ''}`}>
-                              <td className="p-4 font-bold text-gray-900">{item.item_name} <br/><span className="text-xs text-gray-500 font-normal">{item.category || 'General'}</span></td>
+                              <td className="p-4 font-bold text-gray-900">
+                                <span className="text-xs text-gray-500 font-normal">{item.category || 'General'}</span><br/>
+                                {item.item_name}
+                              </td>
                               <td className="p-4 text-gray-600 text-sm"><span className={`font-bold ${item.available_quantity > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{item.available_quantity} Avail</span> <span className="text-gray-400 mx-1">/</span> {item.total_quantity} Total</td>
                               <td className="p-4 text-right">
                                 <button onClick={() => startEditItem(item)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded text-xs font-bold mr-2 transition-colors">Edit</button>
