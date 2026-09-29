@@ -25,13 +25,41 @@ export default function HomePage() {
     loadData();
   }, []);
 
-  // Helper to check if the announcement is less than 48 hours old
   const isNew = (dateString: string) => {
     if (!dateString) return false;
     const postDate = new Date(dateString);
     const now = new Date();
     const diffInHours = (now.getTime() - postDate.getTime()) / (1000 * 60 * 60);
     return diffInHours <= 48;
+  };
+
+  // 100% Foolproof Link Renderer
+  const renderWithLinks = (text: string) => {
+    if (!text) return null;
+    
+    // Split the text perfectly around the URL (capturing group keeps the URL intact)
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+
+    return parts.map((part, i) => {
+      // Because we split exactly on the URL, it will always start with http or https
+      if (part.startsWith('http://') || part.startsWith('https://')) {
+        return (
+          <a 
+            key={i} 
+            href={part} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-[#6A00F4] font-black underline hover:text-slate-900 transition-colors inline-block"
+            style={{ position: 'relative', zIndex: 999, pointerEvents: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
   };
 
   return (
@@ -56,7 +84,6 @@ export default function HomePage() {
               </div>
             </Link>
 
-            {/* Desktop navigation */}
             <nav className="hidden lg:flex items-center gap-6">
               <Link href="/" className="text-sm font-black uppercase tracking-wider text-[#ccff00] italic">Home</Link>
               <Link href="/features/announcements" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Notices</Link>
@@ -67,7 +94,6 @@ export default function HomePage() {
             </nav>
 
             <div className="flex items-center gap-4">
-              
               <button 
                 onClick={() => setIsMobileMenuOpen(true)} 
                 className="h-10 w-10 bg-white/10 text-white flex flex-col items-center justify-center gap-1.5 hover:bg-[#6A00F4] transition-colors lg:hidden -skew-x-6"
@@ -82,43 +108,42 @@ export default function HomePage() {
       </header>
 
       {/* =========================
-    MOBILE SLIDE-OUT DRAWER
-========================== */}
-<div 
-  onClick={closeMenu} 
-  className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-all duration-300 ${isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} 
-/>
+          MOBILE SLIDE-OUT DRAWER
+      ========================== */}
+      <div 
+        onClick={closeMenu} 
+        className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-all duration-300 ${isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} 
+      />
 
-<aside className={`fixed right-0 top-0 bottom-0 z-[70] w-[300px] bg-slate-950 border-l-8 border-[#6A00F4] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
-  <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-900">
-    <h2 className="text-xl font-black text-white italic tracking-tighter uppercase">Menu</h2>
-    <button onClick={closeMenu} className="text-slate-400 hover:text-[#ccff00] text-3xl font-black transition-colors">&times;</button>
-  </div>
-
-  <nav className="flex flex-col p-6 space-y-4 flex-grow">
-    {[
-      ["/", "HOME"],
-      ["/features/announcements", "NOTICES"],
-      ["/features/department", "GALLERY"],
-      ["/features/facilities", "INVENTORY"],
-      ["/features/request", "REQUEST GEAR"],
-      ["/features/tracker", "LIVE TRACKING"],
-    ].map(([href, label]) => (
-      <Link key={href} href={href} onClick={closeMenu} className="group w-full text-left">
-        <div className="text-2xl font-black text-slate-500 uppercase tracking-tighter italic group-hover:text-white group-hover:translate-x-2 transition-all">
-          {label}
+      <aside className={`fixed right-0 top-0 bottom-0 z-[70] w-[300px] bg-slate-950 border-l-8 border-[#6A00F4] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+        <div className="p-6 flex items-center justify-between border-b border-white/10 bg-slate-900">
+          <h2 className="text-xl font-black text-white italic tracking-tighter uppercase">Menu</h2>
+          <button onClick={closeMenu} className="text-slate-400 hover:text-[#ccff00] text-3xl font-black transition-colors">&times;</button>
         </div>
-      </Link>
-    ))}
-  </nav>
-</aside>
+
+        <nav className="flex flex-col p-6 space-y-4 flex-grow">
+          {[
+            ["/", "HOME"],
+            ["/features/announcements", "NOTICES"],
+            ["/features/department", "GALLERY"],
+            ["/features/facilities", "INVENTORY"],
+            ["/features/request", "REQUEST GEAR"],
+            ["/features/tracker", "LIVE TRACKING"],
+          ].map(([href, label]) => (
+            <Link key={href} href={href} onClick={closeMenu} className="group w-full text-left">
+              <div className="text-2xl font-black text-slate-500 uppercase tracking-tighter italic group-hover:text-white group-hover:translate-x-2 transition-all">
+                {label}
+              </div>
+            </Link>
+          ))}
+        </nav>
+      </aside>
 
       {/* =========================
           MAIN CONTENT
       ========================== */}
       <main className="flex-grow pt-[70px]">
         
-       {/* HERO SECTION */}
         <section className="relative min-h-[400px] md:min-h-[70vh] flex items-center overflow-hidden border-b-8 border-slate-950">
           <div className="absolute inset-0"><HeroCarousel /></div>
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/70 via-slate-950/30 to-transparent" />
@@ -146,9 +171,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* =========================
-            SPLIT CONTENT SECTION 
-        ========================== */}
         <section className="max-w-[1400px] mx-auto px-4 md:px-8 py-16 grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           <div className="order-2 lg:order-1 lg:col-span-2 bg-white border-2 border-slate-200 p-6 md:p-10 shadow-[4px_4px_0_0_rgba(15,23,42,1)] flex flex-col">
@@ -161,58 +183,57 @@ export default function HomePage() {
               <p>Through regular sporting activities, training, tournaments, and institute-level competitions, students are encouraged to discover their potential and represent CIT Kokrajhar at various levels. The committee strives to create a vibrant sporting culture where every student can participate, compete, and grow.</p>
               <p>With a strong focus on fitness, teamwork, discipline, and excellence, the Sports Committee continues to make sports an integral part of campus life and student experience at CIT Kokrajhar.</p>
             </div>
-
-            
           </div>
 
-         <div className="order-1 lg:order-2 bg-white border-2 border-slate-200 shadow-[4px_4px_0_0_rgba(15,23,42,1)] flex flex-col h-[450px] lg:h-auto">
-  <h3 className="bg-slate-950 text-white font-black p-5 text-xl uppercase italic tracking-wide shrink-0 border-b-4 border-[#ccff00] flex items-center justify-between">
-    Notices <span className="text-xl"></span>
-  </h3>
-  
-  <div className="p-4 space-y-4 overflow-y-auto flex-grow bg-slate-50">
-    {announcements.slice(0, 5).map((ann) => {
-      const timestamp = ann.created_at || ann.date_posted;
-      const showNewBadge = isNew(timestamp);
+          <div className="order-1 lg:order-2 bg-white border-2 border-slate-200 shadow-[4px_4px_0_0_rgba(15,23,42,1)] flex flex-col h-[450px] lg:h-auto">
+            <h3 className="bg-slate-950 text-white font-black p-5 text-xl uppercase italic tracking-wide shrink-0 border-b-4 border-[#ccff00] flex items-center justify-between">
+              Notices <span className="text-xl"></span>
+            </h3>
+            
+            <div className="p-4 space-y-4 overflow-y-auto flex-grow bg-slate-50 relative z-10">
+              {announcements.slice(0, 5).map((ann) => {
+                const timestamp = ann.created_at || ann.date_posted;
+                const showNewBadge = isNew(timestamp);
 
-      return (
-        <div key={ann.id} className="border-b-2 border-slate-200 pb-4 group">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="inline-block bg-slate-200 text-slate-600 px-2 py-0.5 -skew-x-6">
-              <p className="skew-x-6 text-[9px] font-black uppercase tracking-widest">
-                {new Date(ann.date_posted).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-              </p>
+                return (
+                  <div key={ann.id} className="border-b-2 border-slate-200 pb-4 group relative z-20">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="inline-block bg-slate-200 text-slate-600 px-2 py-0.5 -skew-x-6">
+                        <p className="skew-x-6 text-[9px] font-black uppercase tracking-widest">
+                          {new Date(ann.date_posted).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      </div>
+                      
+                      {showNewBadge && (
+                        <span className="bg-red-500 text-white px-2 py-0.5 text-[9px] font-black uppercase tracking-widest -skew-x-6 animate-pulse">
+                          <span className="skew-x-6 block">🔥 NEW</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Removed the group-hover:text-[#6A00F4] class so the title stays dark */}
+                    <h4 className="text-base font-black text-slate-900 transition-colors leading-snug break-words">
+                      {ann.title?.replace(/,/g, ', ')}
+                    </h4>
+
+                    {/* Link container */}
+                    <p className="text-sm text-slate-600 mt-2 break-words relative z-[50]">
+                      {renderWithLinks(ann.description)}
+                    </p>
+                  </div>
+                );
+              })}
+              {announcements.length === 0 && (
+                <p className="text-slate-400 font-bold text-center mt-10">No active updates.</p>
+              )}
             </div>
-            
-            {/* NEW BADGE */}
-            {showNewBadge && (
-              <span className="bg-red-500 text-white px-2 py-0.5 text-[9px] font-black uppercase tracking-widest -skew-x-6 animate-pulse">
-                <span className="skew-x-6 block">🔥 NEW</span>
-              </span>
-            )}
+
+            <div className="bg-white p-4 border-t-2 border-slate-200 text-center shrink-0 relative z-10">
+              <Link href="/features/announcements" className="text-sm font-black text-[#6A00F4] hover:text-slate-950 uppercase tracking-widest transition-colors">
+                View Full Feed →
+              </Link>
+            </div>
           </div>
-
-          <h4 className="text-base font-black text-slate-900 group-hover:text-[#6A00F4] transition-colors cursor-pointer leading-snug break-words">
-            {ann.title?.replace(/,/g, ', ')}
-          </h4>
-
-          <p className="text-sm text-slate-600 mt-2 line-clamp-3 break-words">
-            {ann.description?.replace(/,/g, ', ')}
-          </p>
-        </div>
-      );
-    })}
-    {announcements.length === 0 && (
-      <p className="text-slate-400 font-bold text-center mt-10">No active updates.</p>
-    )}
-  </div>
-
-  <div className="bg-white p-4 border-t-2 border-slate-200 text-center shrink-0">
-    <Link href="/features/announcements" className="text-sm font-black text-[#6A00F4] hover:text-slate-950 uppercase tracking-widest transition-colors">
-      View Full Feed →
-    </Link>
-  </div>
-</div>
 
         </section>
       </main>
@@ -249,13 +270,11 @@ export default function HomePage() {
                   <li><Link href="/" className="text-sm text-slate-400 hover:text-white transition">Home</Link></li>
                   <li><Link href="/features/announcements" className="text-sm text-slate-400 hover:text-white transition">Live Feed</Link></li>
                   <li><Link href="/features/facilities" className="text-sm text-slate-400 hover:text-white transition">Inventory</Link></li>
-                  
                 </ul>
               </div>
               <div>
                 <h4 className="text-xs font-black uppercase tracking-widest text-[#6A00F4] mb-4">Institute</h4>
                 <ul className="space-y-3 font-medium">
-                  
                   <li><Link href="https://cit.ac.in/" className="text-sm text-slate-400 hover:text-white transition">Main Website</Link></li>
                 </ul>
               </div>
@@ -272,7 +291,6 @@ export default function HomePage() {
             <p className="text-xs text-slate-500 font-medium">
               © {new Date().getFullYear()} Central Institute of Technology Kokrajhar. All rights reserved.
             </p>
-           
           </div>
         </div>
       </footer>
