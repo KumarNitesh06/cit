@@ -208,31 +208,24 @@ export default function AdminDashboard() {
 
   const cancelEditAnn = () => { setEditingAnnId(null); setAnnTitle(""); setAnnDesc(""); setAnnIcon("trophy"); setAnnFile(null); };
 
-  // --- DELETE ANNOUNCEMENT (UPDATED FOR STORAGE PURGE) ---
+  // --- DELETE ANNOUNCEMENT ---
   const handleDeleteAnnouncement = async (ann: any) => {
     if (!window.confirm(`Are you sure you want to delete the announcement "${ann.title}"?`)) return;
 
-    // 1. If an attachment exists, delete it from the storage bucket first
     if (ann.attachment_url) {
       try {
-        // Extract the filename from the end of the public URL
         const fileName = ann.attachment_url.split('/').pop()?.split('?')[0];
-        
         if (fileName) {
           const { error: storageError } = await supabase.storage
             .from('announcements_files')
             .remove([fileName]);
-            
-          if (storageError) {
-            console.error("Failed to delete file from storage:", storageError);
-          }
+          if (storageError) console.error("Failed to delete file from storage:", storageError);
         }
       } catch (err) {
         console.error("Error parsing file URL:", err);
       }
     }
 
-    // 2. Delete the database row
     await supabase.from("announcements").delete().eq("id", ann.id);
     fetchData();
   };
@@ -263,7 +256,7 @@ export default function AdminDashboard() {
   };
 
   const handleReturnEquipment = async (record: any) => {
-    if (!window.confirm(`Mark ${record.quantity}x ${record.item_issued} as returned by ${record.student_name}?`)) return;
+    if (!window.confirm(`Mark ${record.quantity} nos ${record.item_issued} as returned by ${record.student_name}?`)) return;
     const { error } = await supabase.from("issued_items").update({ status: 'returned', returned_at: new Date().toISOString() }).eq("id", record.id);
     if (error) { alert("Error returning equipment: " + error.message); return; }
 
@@ -390,19 +383,29 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {pendingRequests.map((req) => (
-                            <tr key={req.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="p-4 text-gray-600 font-medium">{new Date(req.request_date).toLocaleDateString()}</td>
-                              <td className="p-4"><span className="font-bold text-gray-900">{req.student_name}</span> <br/><span className="text-xs text-gray-500">{req.roll_no} • {req.branch} (S{req.semester})</span></td>
-                              <td className="p-4 font-bold text-[#6A00F4]">{req.quantity}x {req.item_name}</td>
-                              <td className="p-4 text-right">
-                                <div className="flex justify-end gap-2">
-                                  <button onClick={() => handleRejectRequest(req)} disabled={isProcessing !== null} className="bg-white text-red-600 border border-red-200 px-3 py-2 rounded text-xs font-bold hover:bg-red-50 disabled:opacity-50">Reject</button>
-                                  <button onClick={() => handleApproveRequest(req)} disabled={isProcessing !== null} className="bg-black text-[#ccff00] px-4 py-2 rounded text-xs font-bold hover:bg-[#6A00F4] hover:text-white transition-colors disabled:opacity-50">{isProcessing === req.id ? "Processing..." : "Approve"}</button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
+                          {pendingRequests.map((req) => {
+                            const matchedItem = inventory.find(i => i.item_name === req.item_name);
+                            const itemCategory = matchedItem?.category || 'General';
+
+                            return (
+                              <tr key={req.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="p-4 text-gray-600 font-medium">
+                                  {new Date(req.request_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                                <td className="p-4"><span className="font-bold text-gray-900">{req.student_name}</span> <br/><span className="text-xs text-gray-500">{req.roll_no} • {req.branch} (S{req.semester})</span></td>
+                                <td className="p-4 font-bold text-[#6A00F4]">
+                                  {req.quantity} nos {req.item_name} <br/>
+                                  <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span>
+                                </td>
+                                <td className="p-4 text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <button onClick={() => handleRejectRequest(req)} disabled={isProcessing !== null} className="bg-white text-red-600 border border-red-200 px-3 py-2 rounded text-xs font-bold hover:bg-red-50 disabled:opacity-50">Reject</button>
+                                    <button onClick={() => handleApproveRequest(req)} disabled={isProcessing !== null} className="bg-black text-[#ccff00] px-4 py-2 rounded text-xs font-bold hover:bg-[#6A00F4] hover:text-white transition-colors disabled:opacity-50">{isProcessing === req.id ? "Processing..." : "Approve"}</button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -516,19 +519,30 @@ export default function AdminDashboard() {
                     <table className="w-full text-left text-sm whitespace-nowrap">
                       <thead><tr className="text-gray-500 border-b border-gray-100 bg-white"><th className="p-4 font-semibold">Student</th><th className="p-4 font-semibold">Roll No / Branch</th><th className="p-4 font-semibold text-purple-600">Item Issued (Qty)</th><th className="p-4 font-semibold text-right">Action</th></tr></thead>
                       <tbody className="divide-y divide-gray-100">
-                        {issuedRecords.length > 0 ? issuedRecords.map((record) => (
-                          <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="p-4 font-medium text-gray-900">{record.student_name}</td>
-                            <td className="p-4 text-gray-600">
-                              {record.roll_no} • {record.branch} <br/>
-                              <span className="text-xs font-medium text-[#6A00F4] mt-1 inline-block">
-                                📞 {record.phone_number || "N/A"}
-                              </span>
-                            </td>
-                            <td className="p-4 font-bold text-purple-700">{record.item_issued} (x{record.quantity || 1})</td>
-                            <td className="p-4 text-right"><button onClick={() => handleReturnEquipment(record)} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded text-xs font-bold hover:bg-emerald-600 hover:text-white transition-colors">Mark Returned</button></td>
-                          </tr>
-                        )) : <tr><td colSpan={4} className="p-12 text-center text-gray-400 font-medium">No equipment currently issued. The vault is full!</td></tr>}
+                        {issuedRecords.length > 0 ? issuedRecords.map((record) => {
+                          const matchedItem = inventory.find(i => i.item_name === record.item_issued);
+                          const itemCategory = matchedItem?.category || 'General';
+
+                          return (
+                            <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="p-4 font-medium text-gray-900">{record.student_name}</td>
+                              <td className="p-4 text-gray-600">
+                                {record.roll_no} • {record.branch} <br/>
+                                <span className="text-xs font-medium text-[#6A00F4] mt-1 inline-block">
+                                  📞 {record.phone_number || "N/A"}
+                                </span>
+                              </td>
+                              <td className="p-4 font-bold text-purple-700">
+                                {record.quantity} nos {record.item_issued} <br/>
+                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span><br/>
+                                <span className="text-[10px] font-medium text-slate-500">
+                                  Out: {new Date(record.issue_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right"><button onClick={() => handleReturnEquipment(record)} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded text-xs font-bold hover:bg-emerald-600 hover:text-white transition-colors">Mark Returned</button></td>
+                            </tr>
+                          );
+                        }) : <tr><td colSpan={4} className="p-12 text-center text-gray-400 font-medium">No equipment currently issued. The vault is full!</td></tr>}
                       </tbody>
                     </table>
                   </div>
@@ -557,7 +571,6 @@ export default function AdminDashboard() {
                           <option value="calendar">📅 Calendar</option>
                         </select>
                         
-                        {/* FILE UPLOAD INPUT */}
                         <div className="flex flex-col gap-1">
                           <label className="text-xs font-bold text-gray-600">Attach PDF or Image (Optional)</label>
                           <input 
@@ -597,7 +610,6 @@ export default function AdminDashboard() {
                               <td className="p-4 text-gray-600">{new Date(ann.date_posted).toLocaleDateString()}</td>
                               <td className="p-4 text-right">
                                 <button onClick={() => startEditAnn(ann)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded text-xs font-bold mr-2 transition-colors">Edit</button>
-                                {/* Updated delete button to pass the whole 'ann' object */}
                                 <button onClick={() => handleDeleteAnnouncement(ann)} className="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-bold transition-colors">Del</button>
                               </td>
                             </tr>
@@ -634,27 +646,33 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {issueHistory.length > 0 ? issueHistory.map((log) => (
-                          <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="p-4">
-                              <span className="text-xs text-gray-500">Issued: {new Date(log.issue_date).toLocaleDateString()}</span><br/>
-                              <span className="text-sm font-bold text-gray-900">Returned: {log.returned_at ? new Date(log.returned_at).toLocaleString() : 'N/A'}</span>
-                            </td>
-                            <td className="p-4">
-                              <span className="font-bold text-gray-900">{log.student_name}</span> <br/>
-                              <span className="text-xs text-gray-500 font-medium">
-                                {log.roll_no} • {log.branch} <br/>
-                                <span className="text-[#6A00F4] mt-1 inline-block">📞 {log.phone_number || "N/A"}</span>
-                              </span>
-                            </td>
-                            <td className="p-4 font-bold text-purple-700">
-                              {log.quantity}x {log.item_issued}
-                            </td>
-                            <td className="p-4 text-right">
-                              <span className="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-700">Returned</span>
-                            </td>
-                          </tr>
-                        )) : (
+                        {issueHistory.length > 0 ? issueHistory.map((log) => {
+                          const matchedItem = inventory.find(i => i.item_name === log.item_issued);
+                          const itemCategory = matchedItem?.category || 'General';
+
+                          return (
+                            <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="p-4">
+                                <span className="text-xs text-gray-500">Issued: {new Date(log.issue_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span><br/>
+                                <span className="text-sm font-bold text-gray-900">Returned: {log.returned_at ? new Date(log.returned_at).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                              </td>
+                              <td className="p-4">
+                                <span className="font-bold text-gray-900">{log.student_name}</span> <br/>
+                                <span className="text-xs text-gray-500 font-medium">
+                                  {log.roll_no} • {log.branch} <br/>
+                                  <span className="text-[#6A00F4] mt-1 inline-block">📞 {log.phone_number || "N/A"}</span>
+                                </span>
+                              </td>
+                              <td className="p-4 font-bold text-purple-700">
+                                {log.quantity} nos {log.item_issued} <br/>
+                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span>
+                              </td>
+                              <td className="p-4 text-right">
+                                <span className="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-700">Returned</span>
+                              </td>
+                            </tr>
+                          );
+                        }) : (
                           <tr><td colSpan={4} className="p-12 text-center text-gray-400 font-medium">No returned equipment logs available.</td></tr>
                         )}
                       </tbody>
@@ -675,16 +693,24 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {historyLogs.length > 0 ? historyLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="p-4 text-gray-600">{new Date(log.request_date).toLocaleString()}</td>
-                            <td className="p-4"><span className="font-bold text-gray-900">{log.student_name}</span> <br/><span className="text-xs text-gray-500">{log.roll_no} • {log.branch}</span></td>
-                            <td className="p-4 font-bold text-gray-700">{log.quantity}x {log.item_name}</td>
-                            <td className="p-4 text-right">
-                              <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${log.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span>
-                            </td>
-                          </tr>
-                        )) : <tr><td colSpan={4} className="p-12 text-center text-gray-400 font-medium">No request history logs available.</td></tr>}
+                        {historyLogs.length > 0 ? historyLogs.map((log) => {
+                          const matchedItem = inventory.find(i => i.item_name === log.item_name);
+                          const itemCategory = matchedItem?.category || 'General';
+
+                          return (
+                            <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="p-4 text-gray-600">{new Date(log.request_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                              <td className="p-4"><span className="font-bold text-gray-900">{log.student_name}</span> <br/><span className="text-xs text-gray-500">{log.roll_no} • {log.branch}</span></td>
+                              <td className="p-4 font-bold text-gray-700">
+                                {log.quantity} nos {log.item_name} <br/>
+                                <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{itemCategory}</span>
+                              </td>
+                              <td className="p-4 text-right">
+                                <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${log.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span>
+                              </td>
+                            </tr>
+                          );
+                        }) : <tr><td colSpan={4} className="p-12 text-center text-gray-400 font-medium">No request history logs available.</td></tr>}
                       </tbody>
                     </table>
                   </div>

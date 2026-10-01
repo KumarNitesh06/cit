@@ -12,7 +12,6 @@ export default function LiveTrackerPage() {
 
   useEffect(() => {
     async function fetchTrackerData() {
-      // Fetch both active loans and the master inventory to get the categories
       const [loansResponse, inventoryResponse] = await Promise.all([
         supabase.from("issued_items").select("*").eq("status", "active").order("issue_date", { ascending: false }),
         supabase.from("sports_items").select("item_name, category")
@@ -22,7 +21,6 @@ export default function LiveTrackerPage() {
         console.error("Error fetching live tracker:", loansResponse.error.message);
       }
 
-      // Create a quick lookup map so we know which item belongs to which category
       const categoryMap: Record<string, string> = {};
       if (inventoryResponse.data) {
         inventoryResponse.data.forEach(item => {
@@ -40,7 +38,6 @@ export default function LiveTrackerPage() {
     fetchTrackerData();
   }, []);
 
-  // Filter the loans based on the search query
   const filteredLoans = rawLoans.filter(loan => {
     const cat = itemToCategory[loan.item_issued] || 'General';
     const query = searchQuery.toLowerCase();
@@ -53,7 +50,6 @@ export default function LiveTrackerPage() {
     );
   });
 
-  // Group the filtered data: Sport Category -> Item Name -> Array of Loans (Students)
   const groupedData: Record<string, Record<string, any[]>> = {};
   filteredLoans.forEach(loan => {
     const cat = itemToCategory[loan.item_issued] || 'General';
@@ -85,7 +81,6 @@ export default function LiveTrackerPage() {
           </p>
         </div>
 
-        {/* SEARCH BAR */}
         <div className="mb-12">
           <div className="relative max-w-2xl">
             <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
@@ -128,7 +123,6 @@ export default function LiveTrackerPage() {
                     return (
                       <div key={itemName} className="bg-white border-2 border-slate-200 p-4 shadow-[4px_4px_0_0_rgba(15,23,42,1)] rounded-xl flex flex-col">
                         
-                        {/* ITEM NAME HEADER - REMOVED CHECKED OUT BADGE */}
                         <div className="border-b-2 border-slate-100 pb-3 mb-4">
                           <h3 className="text-lg font-black text-[#6A00F4] uppercase tracking-tight">
                             {itemName}
@@ -144,7 +138,8 @@ export default function LiveTrackerPage() {
                                   {loan.student_name}
                                 </span>
                                 <span className="bg-slate-950 text-[#ccff00] px-2 py-0.5 text-[10px] font-black -skew-x-6 shrink-0">
-                                  <span className="skew-x-6 block">{loan.quantity}x</span>
+                                  {/* CHANGED TO nos */}
+                                  <span className="skew-x-6 block">{loan.quantity} nos</span>
                                 </span>
                               </div>
                               
@@ -155,7 +150,13 @@ export default function LiveTrackerPage() {
                               <div className="text-[9px] font-black text-slate-400 mt-2 flex items-center gap-1.5">
                                 <span>OUT:</span>
                                 <span className="text-slate-700 bg-slate-200 px-1.5 py-0.5 rounded">
-                                  {new Date(loan.issue_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(loan.issue_date).toLocaleString(undefined, { 
+                                    month: 'short', 
+                                    day: 'numeric', 
+                                    year: 'numeric', 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}
                                 </span>
                               </div>
                             </div>
