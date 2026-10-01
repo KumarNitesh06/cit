@@ -256,7 +256,7 @@ export default function AdminDashboard() {
   };
 
   const handleReturnEquipment = async (record: any) => {
-    if (!window.confirm(`Mark ${record.quantity} nos ${record.item_issued} as returned by ${record.student_name}?`)) return;
+    if (!window.confirm(`Mark ${record.item_issued} (${record.quantity} nos) as returned by ${record.student_name}?`)) return;
     const { error } = await supabase.from("issued_items").update({ status: 'returned', returned_at: new Date().toISOString() }).eq("id", record.id);
     if (error) { alert("Error returning equipment: " + error.message); return; }
 
@@ -394,7 +394,7 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="p-4"><span className="font-bold text-gray-900">{req.student_name}</span> <br/><span className="text-xs text-gray-500">{req.roll_no} • {req.branch} (S{req.semester})</span></td>
                                 <td className="p-4 font-bold text-[#6A00F4]">
-                                  {req.quantity} nos {req.item_name} <br/>
+                                  {req.item_name} ({req.quantity} nos) <br/>
                                   <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span>
                                 </td>
                                 <td className="p-4 text-right">
@@ -533,7 +533,7 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="p-4 font-bold text-purple-700">
-                                {record.quantity} nos {record.item_issued} <br/>
+                                {record.item_issued} ({record.quantity || 1} nos) <br/>
                                 <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span><br/>
                                 <span className="text-[10px] font-medium text-slate-500">
                                   Out: {new Date(record.issue_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -664,7 +664,7 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="p-4 font-bold text-purple-700">
-                                {log.quantity} nos {log.item_issued} <br/>
+                                {log.item_issued} ({log.quantity} nos) <br/>
                                 <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span>
                               </td>
                               <td className="p-4 text-right">
@@ -702,7 +702,7 @@ export default function AdminDashboard() {
                               <td className="p-4 text-gray-600">{new Date(log.request_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                               <td className="p-4"><span className="font-bold text-gray-900">{log.student_name}</span> <br/><span className="text-xs text-gray-500">{log.roll_no} • {log.branch}</span></td>
                               <td className="p-4 font-bold text-gray-700">
-                                {log.quantity} nos {log.item_name} <br/>
+                                {log.item_name} ({log.quantity} nos) <br/>
                                 <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{itemCategory}</span>
                               </td>
                               <td className="p-4 text-right">
