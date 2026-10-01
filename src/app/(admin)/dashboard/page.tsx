@@ -9,7 +9,7 @@ export default function AdminDashboard() {
 
   // --- NAVIGATION & LAYOUT STATES ---
   const [activeTab, setActiveTab] = useState("requests");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // NEW: Controls mobile sidebar
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // --- DATA STATES ---
   const [inventory, setInventory] = useState<any[]>([]);
@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   const [annIcon, setAnnIcon] = useState("trophy"); 
   const [annStatus, setAnnStatus] = useState("");
   const [editingAnnId, setEditingAnnId] = useState<string | null>(null);
+  const [annFile, setAnnFile] = useState<File | null>(null);
 
   // --- FORM STATES (ISSUE) ---
   const [studentName, setStudentName] = useState("");
@@ -155,23 +156,86 @@ export default function AdminDashboard() {
     e.preventDefault();
     setAnnStatus(editingAnnId ? "Updating..." : "Posting...");
 
+    let attachmentUrl = null;
+
+    if (annFile) {
+      setAnnStatus("Uploading file...");
+      const fileExt = annFile.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('announcements_files')
+        .upload(fileName, annFile);
+
+      if (uploadError) {
+        setAnnStatus("❌ File upload failed.");
+        console.error(uploadError);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('announcements_files')
+        .getPublicUrl(fileName);
+        
+      attachmentUrl = publicUrlData.publicUrl;
+    }
+
+    const payload: any = { 
+      title: annTitle, 
+      description: annDesc, 
+      icon_type: annIcon 
+    };
+
+    if (attachmentUrl) {
+      payload.attachment_url = attachmentUrl;
+    }
+
     if (editingAnnId) {
-      const { error } = await supabase.from("announcements").update({ title: annTitle, description: annDesc, icon_type: annIcon }).eq("id", editingAnnId);
+      const { error } = await supabase.from("announcements").update(payload).eq("id", editingAnnId);
       if (error) setAnnStatus("❌ Error updating.");
       else { setAnnStatus("✅ Updated!"); cancelEditAnn(); fetchData(); }
     } else {
-      const { error } = await supabase.from("announcements").insert([{ title: annTitle, description: annDesc, icon_type: annIcon }]);
+      const { error } = await supabase.from("announcements").insert([payload]);
       if (error) setAnnStatus("❌ Error posting.");
-      else { setAnnStatus("✅ Posted!"); setAnnTitle(""); setAnnDesc(""); fetchData(); }
+      else { setAnnStatus("✅ Posted!"); setAnnTitle(""); setAnnDesc(""); setAnnFile(null); fetchData(); }
     }
     setTimeout(() => setAnnStatus(""), 3000);
   };
 
   const startEditAnn = (ann: any) => {
-    setEditingAnnId(ann.id); setAnnTitle(ann.title); setAnnDesc(ann.description); setAnnIcon(ann.icon_type || "trophy"); setActiveTab("announcements");
+    setEditingAnnId(ann.id); setAnnTitle(ann.title); setAnnDesc(ann.description); setAnnIcon(ann.icon_type || "trophy"); setAnnFile(null); setActiveTab("announcements");
   };
 
-  const cancelEditAnn = () => { setEditingAnnId(null); setAnnTitle(""); setAnnDesc(""); setAnnIcon("trophy"); };
+  const cancelEditAnn = () => { setEditingAnnId(null); setAnnTitle(""); setAnnDesc(""); setAnnIcon("trophy"); setAnnFile(null); };
+
+  // --- DELETE ANNOUNCEMENT (UPDATED FOR STORAGE PURGE) ---
+  const handleDeleteAnnouncement = async (ann: any) => {
+    if (!window.confirm(`Are you sure you want to delete the announcement "${ann.title}"?`)) return;
+
+    // 1. If an attachment exists, delete it from the storage bucket first
+    if (ann.attachment_url) {
+      try {
+        // Extract the filename from the end of the public URL
+        const fileName = ann.attachment_url.split('/').pop()?.split('?')[0];
+        
+        if (fileName) {
+          const { error: storageError } = await supabase.storage
+            .from('announcements_files')
+            .remove([fileName]);
+            
+          if (storageError) {
+            console.error("Failed to delete file from storage:", storageError);
+          }
+        }
+      } catch (err) {
+        console.error("Error parsing file URL:", err);
+      }
+    }
+
+    // 2. Delete the database row
+    await supabase.from("announcements").delete().eq("id", ann.id);
+    fetchData();
+  };
 
   const handleIssueItem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,7 +262,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- RETURN & DELETE HANDLERS ---
   const handleReturnEquipment = async (record: any) => {
     if (!window.confirm(`Mark ${record.quantity}x ${record.item_issued} as returned by ${record.student_name}?`)) return;
     const { error } = await supabase.from("issued_items").update({ status: 'returned', returned_at: new Date().toISOString() }).eq("id", record.id);
@@ -217,14 +280,7 @@ export default function AdminDashboard() {
     const { error } = await supabase.from("sports_items").delete().eq("id", id);
     if (error) {
       alert(`❌ Cannot delete "${name}".\n\nThis usually means the item is currently active in 'Pending Requests' or 'Issued Equipment'. You must Reject/Return those active records before you can delete the item from the database forever.`);
-      console.error("Deletion Blocked:", error.message || "Foreign key constraint", error.details || "");
     } else fetchData();
-  };
-
-  const handleDeleteAnnouncement = async (id: string, title: string) => {
-    if (!window.confirm(`Are you sure you want to delete the announcement "${title}"?`)) return;
-    await supabase.from("announcements").delete().eq("id", id);
-    fetchData();
   };
 
   const uniqueCategories = Array.from(new Set([
@@ -232,7 +288,6 @@ export default function AdminDashboard() {
     ...inventory.map(i => i.category).filter(Boolean)
   ])).sort();
 
-  // Helper to change tab and close sidebar on mobile
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setIsSidebarOpen(false);
@@ -256,7 +311,6 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-black uppercase italic tracking-tighter text-[#ccff00]">CITK Sports</h1>
             <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Admin Command Center</p>
           </div>
-          {/* Mobile Close Button */}
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">✕</button>
         </div>
         
@@ -441,13 +495,13 @@ export default function AdminDashboard() {
                     <input type="text" required value={semester} onChange={(e) => setSemester(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm" placeholder="Semester" />
                     <input type="text" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm lg:col-span-1" placeholder="Phone" />
                     <select required value={issuedItem} onChange={(e) => setIssuedItem(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm lg:col-span-2 bg-white">
-  <option value="" disabled>Select Item to Issue...</option>
-  {inventory.map(item => (
-    <option key={item.id} value={item.item_name}>
-      {item.item_name} - {item.category || 'General'} ({item.available_quantity} available)
-    </option>
-  ))}
-</select>
+                      <option value="" disabled>Select Item to Issue...</option>
+                      {inventory.map(item => (
+                        <option key={item.id} value={item.item_name}>
+                          {item.item_name} - {item.category || 'General'} ({item.available_quantity} available)
+                        </option>
+                      ))}
+                    </select>
                     <input type="number" required min="1" value={issueQuantity} onChange={(e) => setIssueQuantity(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm lg:col-span-1" placeholder="Qty" />
                     <div className="md:col-span-2 lg:col-span-4 flex items-center gap-4 mt-2">
                       <button type="submit" className="bg-purple-600 text-white px-6 md:px-8 py-3 rounded-md text-sm font-bold hover:bg-purple-700 transition-colors w-full md:w-auto">Issue Record Now</button>
@@ -466,11 +520,11 @@ export default function AdminDashboard() {
                           <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                             <td className="p-4 font-medium text-gray-900">{record.student_name}</td>
                             <td className="p-4 text-gray-600">
-  {record.roll_no} • {record.branch} <br/>
-  <span className="text-xs font-medium text-[#6A00F4] mt-1 inline-block">
-    📞 {record.phone_number || "N/A"}
-  </span>
-</td>
+                              {record.roll_no} • {record.branch} <br/>
+                              <span className="text-xs font-medium text-[#6A00F4] mt-1 inline-block">
+                                📞 {record.phone_number || "N/A"}
+                              </span>
+                            </td>
                             <td className="p-4 font-bold text-purple-700">{record.item_issued} (x{record.quantity || 1})</td>
                             <td className="p-4 text-right"><button onClick={() => handleReturnEquipment(record)} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded text-xs font-bold hover:bg-emerald-600 hover:text-white transition-colors">Mark Returned</button></td>
                           </tr>
@@ -502,6 +556,18 @@ export default function AdminDashboard() {
                           <option value="briefcase">💼 Briefcase</option>
                           <option value="calendar">📅 Calendar</option>
                         </select>
+                        
+                        {/* FILE UPLOAD INPUT */}
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-bold text-gray-600">Attach PDF or Image (Optional)</label>
+                          <input 
+                            type="file" 
+                            accept="image/*,.pdf" 
+                            onChange={(e) => setAnnFile(e.target.files?.[0] || null)} 
+                            className="w-full border border-gray-200 rounded-md p-2 text-sm bg-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                          />
+                        </div>
+
                         <div className="flex gap-2 pt-2">
                           <button type="submit" className={`flex-1 text-white px-4 py-3 rounded-md text-sm font-bold transition-colors ${editingAnnId ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{editingAnnId ? "Update" : "Publish"}</button>
                           {editingAnnId && <button type="button" onClick={cancelEditAnn} className="bg-gray-200 text-gray-700 px-4 py-3 rounded-md text-sm font-bold hover:bg-gray-300 transition-colors">Cancel</button>}
@@ -521,11 +587,18 @@ export default function AdminDashboard() {
                         <tbody className="divide-y divide-gray-100">
                           {announcements.length > 0 ? announcements.map((ann) => (
                             <tr key={ann.id} className={`hover:bg-gray-50 ${editingAnnId === ann.id ? 'bg-yellow-50' : ''}`}>
-                              <td className="p-4"><span className="font-bold text-gray-900 text-base">{ann.title}</span><br/><span className="text-gray-500 text-xs mt-1 block truncate max-w-[200px] md:max-w-md">{ann.description}</span></td>
+                              <td className="p-4">
+                                <span className="font-bold text-gray-900 text-base flex items-center gap-2">
+                                  {ann.title} 
+                                  {ann.attachment_url && <span title="Has Attachment">📎</span>}
+                                </span>
+                                <span className="text-gray-500 text-xs mt-1 block truncate max-w-[200px] md:max-w-md">{ann.description}</span>
+                              </td>
                               <td className="p-4 text-gray-600">{new Date(ann.date_posted).toLocaleDateString()}</td>
                               <td className="p-4 text-right">
                                 <button onClick={() => startEditAnn(ann)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded text-xs font-bold mr-2 transition-colors">Edit</button>
-                                <button onClick={() => handleDeleteAnnouncement(ann.id, ann.title)} className="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-bold transition-colors">Del</button>
+                                {/* Updated delete button to pass the whole 'ann' object */}
+                                <button onClick={() => handleDeleteAnnouncement(ann)} className="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-bold transition-colors">Del</button>
                               </td>
                             </tr>
                           )) : <tr><td colSpan={3} className="p-12 text-center text-gray-400 font-medium">No active announcements.</td></tr>}
@@ -561,39 +634,30 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-  {issueHistory.length > 0 ? issueHistory.map((log) => (
-    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-      
-      <td className="p-4">
-        <span className="text-xs text-gray-500">Issued: {new Date(log.issue_date).toLocaleDateString()}</span><br/>
-        <span className="text-sm font-bold text-gray-900">Returned: {log.returned_at ? new Date(log.returned_at).toLocaleString() : 'N/A'}</span>
-      </td>
-      
-      <td className="p-4">
-        <span className="font-bold text-gray-900">{log.student_name}</span> <br/>
-        <span className="text-xs text-gray-500 font-medium">
-          {log.roll_no} • {log.branch} <br/>
-          <span className="text-[#6A00F4] mt-1 inline-block">📞 {log.phone_number || "N/A"}</span>
-        </span>
-      </td>
-      
-      <td className="p-4 font-bold text-purple-700">
-        {log.quantity}x {log.item_issued}
-      </td>
-      
-      <td className="p-4 text-right">
-        <span className="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-700">Returned</span>
-      </td>
-      
-    </tr>
-  )) : (
-    <tr>
-      <td colSpan={4} className="p-12 text-center text-gray-400 font-medium">
-        No returned equipment logs available.
-      </td>
-    </tr>
-  )}
-</tbody>
+                        {issueHistory.length > 0 ? issueHistory.map((log) => (
+                          <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="p-4">
+                              <span className="text-xs text-gray-500">Issued: {new Date(log.issue_date).toLocaleDateString()}</span><br/>
+                              <span className="text-sm font-bold text-gray-900">Returned: {log.returned_at ? new Date(log.returned_at).toLocaleString() : 'N/A'}</span>
+                            </td>
+                            <td className="p-4">
+                              <span className="font-bold text-gray-900">{log.student_name}</span> <br/>
+                              <span className="text-xs text-gray-500 font-medium">
+                                {log.roll_no} • {log.branch} <br/>
+                                <span className="text-[#6A00F4] mt-1 inline-block">📞 {log.phone_number || "N/A"}</span>
+                              </span>
+                            </td>
+                            <td className="p-4 font-bold text-purple-700">
+                              {log.quantity}x {log.item_issued}
+                            </td>
+                            <td className="p-4 text-right">
+                              <span className="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-700">Returned</span>
+                            </td>
+                          </tr>
+                        )) : (
+                          <tr><td colSpan={4} className="p-12 text-center text-gray-400 font-medium">No returned equipment logs available.</td></tr>
+                        )}
+                      </tbody>
                     </table>
                   </div>
                 </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -41,6 +42,39 @@ export default function AnnouncementsPage() {
     const now = new Date();
     const diffInHours = (now.getTime() - postDate.getTime()) / (1000 * 60 * 60);
     return diffInHours <= 48;
+  };
+
+  // Helper to determine if the attachment is an image
+  const isImageUrl = (url: string) => {
+    if (!url) return false;
+    return url.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) != null;
+  };
+
+  // 100% Bulletproof Link Renderer (No Regex)
+  const renderWithLinks = (text: string) => {
+    if (!text) return null;
+    
+    // Fix commas, then split by any whitespace (keeping the spaces intact in the array)
+    const cleanText = text.replace(/,/g, ', ');
+    const words = cleanText.split(/(\s+)/);
+
+    return words.map((word, i) => {
+      if (word.startsWith('http://') || word.startsWith('https://')) {
+        return (
+          <a 
+            key={i} 
+            href={word} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-[#6A00F4] font-black underline hover:text-slate-900 transition-colors inline-block relative z-[999] cursor-pointer pointer-events-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {word}
+          </a>
+        );
+      }
+      return <span key={i}>{word}</span>;
+    });
   };
 
   return (
@@ -94,7 +128,7 @@ export default function AnnouncementsPage() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     
-                    {/* Badges Row (Date and NEW flag isolated from title) */}
+                    {/* Badges Row */}
                     <div className="flex flex-wrap items-center gap-3 mb-3">
                       <span className="inline-block bg-slate-950 text-[#ccff00] px-3 py-1 text-[10px] font-black uppercase tracking-widest -skew-x-6 w-max">
                         <span className="skew-x-6 block">
@@ -113,14 +147,47 @@ export default function AnnouncementsPage() {
                       )}
                     </div>
 
-                    {/* Title with automatic spaces injected after commas */}
+                    {/* Title */}
                     <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-tight break-words">
                       {ann.title.replace(/,/g, ', ')}
                     </h2>
                     
-                    <p className="text-slate-600 font-medium leading-relaxed mt-3 break-words">
-  {ann.description?.replace(/,/g, ', ')}
-</p>
+                    {/* Description */}
+                    <p className="text-slate-600 font-medium leading-relaxed mt-3 break-words relative z-[50]">
+                      {renderWithLinks(ann.description)}
+                    </p>
+
+                    {/* ATTACHMENT DISPLAY SECTION */}
+                    {ann.attachment_url && (
+                      <div className="mt-5 relative z-[60]">
+                        {isImageUrl(ann.attachment_url) ? (
+                          <a 
+                            href={ann.attachment_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="block max-w-[400px] border-4 border-slate-200 rounded-xl overflow-hidden hover:border-[#6A00F4] transition-colors"
+                          >
+                            <img 
+                              src={ann.attachment_url} 
+                              alt="Announcement Attachment" 
+                              className="w-full h-auto object-contain bg-slate-50"
+                            />
+                          </a>
+                        ) : (
+                          <a 
+                            href={ann.attachment_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-block bg-slate-950 text-white hover:bg-[#6A00F4] hover:text-white px-5 py-3 text-xs font-black uppercase tracking-widest transition-colors -skew-x-6"
+                          >
+                            <span className="skew-x-6 block flex items-center gap-2">
+                              📎 View Attached Document
+                            </span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+
                   </div>
                 </div>
               );

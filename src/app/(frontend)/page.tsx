@@ -33,32 +33,35 @@ export default function HomePage() {
     return diffInHours <= 48;
   };
 
-  // 100% Foolproof Link Renderer
+  // Helper to determine if the attachment is an image
+  const isImageUrl = (url: string) => {
+    if (!url) return false;
+    return url.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) != null;
+  };
+
+  // 100% Bulletproof Link Renderer (No Regex)
   const renderWithLinks = (text: string) => {
     if (!text) return null;
     
-    // Split the text perfectly around the URL (capturing group keeps the URL intact)
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
+    const cleanText = text.replace(/,/g, ', ');
+    const words = cleanText.split(/(\s+)/);
 
-    return parts.map((part, i) => {
-      // Because we split exactly on the URL, it will always start with http or https
-      if (part.startsWith('http://') || part.startsWith('https://')) {
+    return words.map((word, i) => {
+      if (word.startsWith('http://') || word.startsWith('https://')) {
         return (
           <a 
             key={i} 
-            href={part} 
+            href={word} 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="text-[#6A00F4] font-black underline hover:text-slate-900 transition-colors inline-block"
-            style={{ position: 'relative', zIndex: 999, pointerEvents: 'auto' }}
+            className="text-[#6A00F4] font-black underline hover:text-slate-900 transition-colors inline-block relative z-[999] cursor-pointer pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {part}
+            {word}
           </a>
         );
       }
-      return <span key={i}>{part}</span>;
+      return <span key={i}>{word}</span>;
     });
   };
 
@@ -211,15 +214,45 @@ export default function HomePage() {
                       )}
                     </div>
 
-                    {/* Removed the group-hover:text-[#6A00F4] class so the title stays dark */}
-                    <h4 className="text-base font-black text-slate-900 transition-colors leading-snug break-words">
-                      {ann.title?.replace(/,/g, ', ')}
-                    </h4>
+                    {/* NEW FLEX CONTAINER FOR TEXT + IMAGE THUMBNAIL */}
+                    <div className="flex gap-4 items-start">
+                      
+                      {/* Left Side: Title and Text */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-black text-slate-900 transition-colors leading-snug break-words relative z-30">
+                          {ann.title?.replace(/,/g, ', ')}
+                        </h4>
+                        
+                        <p className="text-sm text-slate-600 mt-2 break-words relative z-[50]">
+                          {renderWithLinks(ann.description)}
+                        </p>
+                      </div>
 
-                    {/* Link container */}
-                    <p className="text-sm text-slate-600 mt-2 break-words relative z-[50]">
-                      {renderWithLinks(ann.description)}
-                    </p>
+                      {/* Right Side: Small File Preview */}
+                      {ann.attachment_url && (
+                        <a 
+                          href={ann.attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 w-16 h-16 bg-white border-2 border-slate-200 rounded-lg overflow-hidden relative z-[60] flex items-center justify-center hover:border-[#6A00F4] transition-all hover:-translate-y-1 group/preview"
+                          title="View Attachment"
+                        >
+                          {isImageUrl(ann.attachment_url) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img 
+                              src={ann.attachment_url} 
+                              alt="Attachment Preview" 
+                              className="w-full h-full object-cover group-hover/preview:scale-110 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-slate-400 group-hover/preview:text-[#6A00F4] transition-colors">
+                              <span className="text-xl mb-0.5">📄</span>
+                              <span className="text-[8px] font-black uppercase tracking-widest">PDF</span>
+                            </div>
+                          )}
+                        </a>
+                      )}
+                    </div>
                   </div>
                 );
               })}
