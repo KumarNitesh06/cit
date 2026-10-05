@@ -50,7 +50,8 @@ export default function AdminDashboard() {
 
   // --- FETCH INITIAL DATA & CHECK AUTH ---
   const fetchData = async () => {
-    const { data: sportsData } = await supabase.from("sports_items").select("*").order("item_name");
+    // UPDATED: Now sorts by Category first, then Item Name
+    const { data: sportsData } = await supabase.from("sports_items").select("*").order("category").order("item_name");
     if (sportsData) setInventory(sportsData);
 
     const { data: issuedData } = await supabase.from("issued_items").select("*").eq("status", "active").order("issue_date", { ascending: false });
@@ -394,8 +395,9 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="p-4"><span className="font-bold text-gray-900">{req.student_name}</span> <br/><span className="text-xs text-gray-500">{req.roll_no} • {req.branch} (S{req.semester})</span></td>
                                 <td className="p-4 font-bold text-[#6A00F4]">
-                                  {req.item_name} ({req.quantity} nos) <br/>
-                                  <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span>
+                                  {/* UPDATED: Category first, then Item (nos) */}
+                                  <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span><br/>
+                                  {req.item_name} ({req.quantity} nos)
                                 </td>
                                 <td className="p-4 text-right">
                                   <div className="flex justify-end gap-2">
@@ -501,7 +503,8 @@ export default function AdminDashboard() {
                       <option value="" disabled>Select Item to Issue...</option>
                       {inventory.map(item => (
                         <option key={item.id} value={item.item_name}>
-                          {item.item_name} - {item.category || 'General'} ({item.available_quantity} available)
+                          {/* UPDATED: Category first, then Item (nos) */}
+                          {item.category || 'General'} - {item.item_name} ({item.available_quantity} nos)
                         </option>
                       ))}
                     </select>
@@ -533,8 +536,9 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="p-4 font-bold text-purple-700">
-                                {record.item_issued} ({record.quantity || 1} nos) <br/>
+                                {/* UPDATED: Category first, then Item (nos) */}
                                 <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span><br/>
+                                {record.item_issued} ({record.quantity || 1} nos) <br/>
                                 <span className="text-[10px] font-medium text-slate-500">
                                   Out: {new Date(record.issue_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </span>
@@ -664,8 +668,9 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="p-4 font-bold text-purple-700">
-                                {log.item_issued} ({log.quantity} nos) <br/>
-                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span>
+                                {/* UPDATED: Category first, then Item (nos) */}
+                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span><br/>
+                                {log.item_issued} ({log.quantity} nos)
                               </td>
                               <td className="p-4 text-right">
                                 <span className="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-700">Returned</span>
@@ -702,8 +707,9 @@ export default function AdminDashboard() {
                               <td className="p-4 text-gray-600">{new Date(log.request_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                               <td className="p-4"><span className="font-bold text-gray-900">{log.student_name}</span> <br/><span className="text-xs text-gray-500">{log.roll_no} • {log.branch}</span></td>
                               <td className="p-4 font-bold text-gray-700">
-                                {log.item_name} ({log.quantity} nos) <br/>
-                                <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{itemCategory}</span>
+                                {/* UPDATED: Category first, then Item (nos) */}
+                                <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{itemCategory}</span><br/>
+                                {log.item_name} ({log.quantity} nos)
                               </td>
                               <td className="p-4 text-right">
                                 <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${log.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span>
