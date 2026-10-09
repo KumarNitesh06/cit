@@ -93,7 +93,7 @@ export default function HomePage() {
               <Link href="/features/tracker" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Live Tracker</Link>
               <Link href="/features/department" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Gallery</Link>
               <Link href="/features/facilities" className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition">Inventory</Link>
-              <Link href="/features/request" className="text-sm font-bold uppercase tracking-wider text-[#ccff00] hover:text-white transition">Request Gear</Link>
+              <Link href="/features/request" className="text-sm font-bold uppercase tracking-wider text-[#ccff00] hover:text-white transition">Request ITEM</Link>
             </nav>
 
             <div className="flex items-center gap-4">
@@ -130,7 +130,7 @@ export default function HomePage() {
             ["/features/announcements", "NOTICES"],
             ["/features/department", "GALLERY"],
             ["/features/facilities", "INVENTORY"],
-            ["/features/request", "REQUEST GEAR"],
+            ["/features/request", "REQUEST ITEM"],
             ["/features/tracker", "LIVE TRACKING"],
           ].map(([href, label]) => (
             <Link key={href} href={href} onClick={closeMenu} className="group w-full text-left">

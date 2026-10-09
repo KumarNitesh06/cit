@@ -41,7 +41,7 @@ const SearchableDropdown = ({ items, selectedId, onSelect }: { items: any[], sel
                 <span className="text-[#6A00F4] group-hover:text-white font-black text-xs bg-slate-100 group-hover:bg-white/20 px-2 py-1 rounded">{item.available_quantity} left</span>
               </div>
             ))}
-            {filteredItems.length === 0 && <div className="px-4 py-6 text-center text-sm text-slate-400 font-bold">No gear found matching "{search}"</div>}
+            {filteredItems.length === 0 && <div className="px-4 py-6 text-center text-sm text-slate-400 font-bold">No Item found matching "{search}"</div>}
           </div>
         </div>
       )}
@@ -131,7 +131,7 @@ export default function RequestGearPage() {
         <div className="border-b-4 border-slate-950 pb-6 mb-12">
           <p className="text-[10px] uppercase tracking-[.3em] font-black text-[#6A00F4]">Issue Portal</p>
           <h1 className="mt-2 text-4xl md:text-6xl font-black tracking-tighter uppercase italic text-slate-950">
-            Request <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6A00F4] to-purple-400">Gear.</span>
+            Request <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6A00F4] to-purple-400">Item.</span>
           </h1>
           <p className="mt-4 max-w-lg text-sm text-slate-500 leading-relaxed font-medium">Select multiple items below and submit your reservation to the sports department in one go.</p>
         </div>
@@ -179,8 +179,8 @@ export default function RequestGearPage() {
             {/* Gear Loadout */}
             <div className="mb-10">
               <div className="flex items-center justify-between border-b-2 border-slate-100 pb-2 mb-4">
-                <h2 className="text-xl font-black text-slate-950 uppercase italic tracking-tighter">Gear Loadout</h2>
-                <button type="button" onClick={addRow} className="text-xs font-black text-[#6A00F4] uppercase tracking-widest hover:text-slate-900 transition-colors">+ Add Gear</button>
+                <h2 className="text-xl font-black text-slate-950 uppercase italic tracking-tighter">Item Loadout</h2>
+                <button type="button" onClick={addRow} className="text-xs font-black text-[#6A00F4] uppercase tracking-widest hover:text-slate-900 transition-colors">+ Add Item</button>
               </div>
               <div className="space-y-4">
                 {requestedItems.map((row, index) => (
