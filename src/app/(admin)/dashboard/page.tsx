@@ -18,6 +18,7 @@ export default function AdminDashboard() {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [historyLogs, setHistoryLogs] = useState<any[]>([]);
   const [issueHistory, setIssueHistory] = useState<any[]>([]);
+  const [receivedLogs, setReceivedLogs] = useState<any[]>([]); 
 
   // --- FORM STATES (INVENTORY) ---
   const [itemName, setItemName] = useState("");
@@ -46,11 +47,20 @@ export default function AdminDashboard() {
   const [issueQuantity, setIssueQuantity] = useState("1");
   const [issueStatus, setIssueStatus] = useState("");
   
+  // --- FORM STATES (RESTOCK/RECEIVED ITEMS - CRUD) ---
+  const [editingRestockId, setEditingRestockId] = useState<string | null>(null);
+  const [restockCategory, setRestockCategory] = useState("General");
+  const [showCustomRestockCategory, setShowCustomRestockCategory] = useState(false);
+  const [restockItem, setRestockItem] = useState("");
+  const [restockQty, setRestockQty] = useState("");
+  const [restockDate, setRestockDate] = useState(new Date().toISOString().split('T')[0]);
+  const [restockRemarks, setRestockRemarks] = useState("Received from Main Office");
+  const [restockStatus, setRestockStatus] = useState("");
+
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   // --- FETCH INITIAL DATA & CHECK AUTH ---
   const fetchData = async () => {
-    // UPDATED: Now sorts by Category first, then Item Name
     const { data: sportsData } = await supabase.from("sports_items").select("*").order("category").order("item_name");
     if (sportsData) setInventory(sportsData);
 
@@ -68,6 +78,9 @@ export default function AdminDashboard() {
 
     const { data: issueHistData } = await supabase.from("issued_items").select("*").eq("status", "returned").order("returned_at", { ascending: false }).limit(100);
     if (issueHistData) setIssueHistory(issueHistData);
+
+    const { data: recData } = await supabase.from("received_items").select("*").order("received_date", { ascending: false }).order("created_at", { ascending: false }).limit(100);
+    if (recData) setReceivedLogs(recData);
   };
 
   useEffect(() => {
@@ -120,6 +133,81 @@ export default function AdminDashboard() {
       fetchData(); 
     }
     setIsProcessing(null);
+  };
+
+  // --- RESTOCK / RECEIVE ITEMS HANDLER (WITH FULL CRUD) ---
+  const handleSaveRestock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRestockStatus(editingRestockId ? "Updating..." : "Processing...");
+    
+    if (!restockItem.trim()) return setRestockStatus("❌ Please enter an item name.");
+    
+    const qtyToAdd = parseInt(restockQty);
+    const finalCategory = restockCategory.trim() || "General";
+
+    const payload = {
+      item_name: restockItem.trim(),
+      category: finalCategory,
+      quantity: qtyToAdd,
+      received_date: restockDate,
+      remarks: restockRemarks
+    };
+
+    if (editingRestockId) {
+      const { error } = await supabase.from("received_items").update(payload).eq("id", editingRestockId);
+      if (error) {
+        setRestockStatus("❌ Error updating record.");
+      } else {
+        setRestockStatus("✅ Restock log updated!");
+        cancelEditRestock();
+        fetchData();
+      }
+    } else {
+      const { error } = await supabase.from("received_items").insert([payload]);
+      if (error) {
+        setRestockStatus("❌ Error saving record.");
+      } else {
+        setRestockStatus("✅ Stock log successfully recorded!");
+        setRestockItem("");
+        setRestockQty("");
+        setRestockRemarks("Received from Main Office");
+        setShowCustomRestockCategory(false);
+        fetchData();
+      }
+    }
+    
+    setTimeout(() => setRestockStatus(""), 4000);
+  };
+
+  const startEditRestock = (log: any) => {
+    setEditingRestockId(log.id);
+    setRestockItem(log.item_name);
+    setRestockCategory(log.category || "General");
+    setShowCustomRestockCategory(false);
+    setRestockQty(log.quantity.toString());
+    setRestockDate(log.received_date);
+    setRestockRemarks(log.remarks || "");
+    setActiveTab("restock");
+  };
+
+  const cancelEditRestock = () => {
+    setEditingRestockId(null);
+    setRestockItem("");
+    setRestockCategory("General");
+    setShowCustomRestockCategory(false);
+    setRestockQty("");
+    setRestockDate(new Date().toISOString().split('T')[0]);
+    setRestockRemarks("Received from Main Office");
+  };
+
+  const handleDeleteRestock = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete the restock log for "${name}"?`)) return;
+    const { error } = await supabase.from("received_items").delete().eq("id", id);
+    if (error) {
+      alert("Error deleting restock log: " + error.message);
+    } else {
+      fetchData();
+    }
   };
 
   // --- SAVE / UPDATE ITEM HANDLER ---
@@ -234,15 +322,23 @@ export default function AdminDashboard() {
   const handleIssueItem = async (e: React.FormEvent) => {
     e.preventDefault();
     setIssueStatus("Processing...");
-    const itemToUpdate = inventory.find(i => i.item_name === issuedItem);
+    
+    const itemToUpdate = inventory.find(i => String(i.id) === String(issuedItem));
     const reqQty = parseInt(issueQuantity);
 
     if (!itemToUpdate) return setIssueStatus("❌ Please select an item.");
     if (itemToUpdate.available_quantity < reqQty) return setIssueStatus(`❌ Not enough stock! Only ${itemToUpdate.available_quantity} left.`);
 
     const { error } = await supabase.from("issued_items").insert([{
-        student_name: studentName, roll_no: rollNo, semester: semester, 
-        branch: branch, phone_number: phone, item_issued: issuedItem, quantity: reqQty, status: 'active',issue_date: new Date().toISOString()
+        student_name: studentName, 
+        roll_no: rollNo, 
+        semester: semester, 
+        branch: branch, 
+        phone_number: phone, 
+        item_issued: itemToUpdate.item_name,
+        quantity: reqQty, 
+        status: 'active',
+        issue_date: new Date().toISOString()
     }]);
 
     if (error) setIssueStatus("❌ Error saving record.");
@@ -277,9 +373,11 @@ export default function AdminDashboard() {
     } else fetchData();
   };
 
+  // --- UPDATED: PULLS CATEGORIES FROM BOTH TABLES ---
   const uniqueCategories = Array.from(new Set([
     "Cricket", "Football", "Badminton", "Volleyball", "Basketball", "Athletics", "Indoor Games", "General",
-    ...inventory.map(i => i.category).filter(Boolean)
+    ...inventory.map(i => i.category).filter(Boolean),
+    ...receivedLogs.map(r => r.category).filter(Boolean)
   ])).sort();
 
   const handleTabChange = (tab: string) => {
@@ -316,6 +414,10 @@ export default function AdminDashboard() {
           
           <button onClick={() => handleTabChange("inventory")} className={`w-full flex items-center p-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'inventory' ? 'bg-[#ccff00] text-black shadow-[4px_4px_0_0_#6A00F4] -skew-x-2' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}>
             <span className={`flex items-center gap-3 ${activeTab === 'inventory' && 'skew-x-2'}`}><span>📦</span> Inventory Setup</span>
+          </button>
+
+          <button onClick={() => handleTabChange("restock")} className={`w-full flex items-center p-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'restock' ? 'bg-[#ccff00] text-black shadow-[4px_4px_0_0_#6A00F4] -skew-x-2' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}>
+            <span className={`flex items-center gap-3 ${activeTab === 'restock' && 'skew-x-2'}`}><span>📥</span> Office Restock</span>
           </button>
 
           <button onClick={() => handleTabChange("issue")} className={`w-full flex items-center p-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'issue' ? 'bg-[#ccff00] text-black shadow-[4px_4px_0_0_#6A00F4] -skew-x-2' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}>
@@ -393,11 +495,13 @@ export default function AdminDashboard() {
                                 <td className="p-4 text-gray-600 font-medium">
                                   {new Date(req.request_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </td>
-                                <td className="p-4"><span className="font-bold text-gray-900">{req.student_name}</span> <br/><span className="text-xs text-gray-500">{req.roll_no} • {req.branch} (S{req.semester})</span></td>
+                                <td className="p-4">
+                                  <span className="font-bold text-gray-900 block">{req.student_name}</span>
+                                  <span className="text-xs text-gray-500 block mt-1">{req.roll_no} • {req.branch} (S{req.semester})</span>
+                                </td>
                                 <td className="p-4 font-bold text-[#6A00F4]">
-                                  {/* UPDATED: Category first, then Item (nos) */}
-                                  <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span><br/>
-                                  {req.item_name} ({req.quantity} nos)
+                                  <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest block">{itemCategory}</span>
+                                  <span className="block mt-1">{req.item_name} ({req.quantity} nos)</span>
                                 </td>
                                 <td className="p-4 text-right">
                                   <div className="flex justify-end gap-2">
@@ -465,8 +569,8 @@ export default function AdminDashboard() {
                           {inventory.map((item) => (
                             <tr key={item.id} className={`hover:bg-gray-50 ${editingItemId === item.id ? 'bg-yellow-50' : ''}`}>
                               <td className="p-4 font-bold text-gray-900">
-                                <span className="text-xs text-gray-500 font-normal">{item.category || 'General'}</span><br/>
-                                {item.item_name}
+                                <span className="text-xs text-gray-500 font-normal block mb-1">{item.category || 'General'}</span>
+                                <span className="block">{item.item_name}</span>
                               </td>
                               <td className="p-4 text-gray-600 text-sm"><span className={`font-bold ${item.available_quantity > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{item.available_quantity} Avail</span> <span className="text-gray-400 mx-1">/</span> {item.total_quantity} Total</td>
                               <td className="p-4 text-right">
@@ -475,6 +579,119 @@ export default function AdminDashboard() {
                               </td>
                             </tr>
                           ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* OFFICE RESTOCK LOGS (CRUD UPDATED) */}
+            {activeTab === "restock" && (
+              <div>
+                <div className="mb-6 md:mb-8">
+                  <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900">Office Restock Logs</h2>
+                  <p className="text-sm text-gray-500 mt-1">Keep a permanent audit trail of items received from the main office.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                  <div className="lg:col-span-1">
+                    <div className={`border rounded-xl p-4 md:p-6 shadow-sm transition-colors ${editingRestockId ? 'bg-yellow-50 border-yellow-200' : 'bg-sky-50 border-sky-100'}`}>
+                      <h2 className={`text-xl font-bold mb-4 ${editingRestockId ? 'text-yellow-900' : 'text-sky-900'}`}>
+                        {editingRestockId ? "✏️ Edit Restock Log" : "📥 Log Received Item"}
+                      </h2>
+                      <form onSubmit={handleSaveRestock} className="space-y-4">
+                        
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-600">Category</label>
+                          {!showCustomRestockCategory ? (
+                            <select required value={restockCategory} onChange={(e) => { 
+                                if (e.target.value === "ADD_NEW") { 
+                                  setShowCustomRestockCategory(true); 
+                                  setRestockCategory(""); 
+                                } else {
+                                  setRestockCategory(e.target.value); 
+                                }
+                              }} className="w-full border border-gray-200 rounded-md p-3 text-sm bg-white">
+                              <option value="General">General</option>
+                              {uniqueCategories.filter(cat => cat !== 'General').map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ))}
+                              <option value="ADD_NEW" className="font-bold text-sky-600">➕ Add New Category...</option>
+                            </select>
+                          ) : (
+                            <div className="flex w-full gap-2">
+                              <input type="text" required value={restockCategory} onChange={(e) => setRestockCategory(e.target.value)} className="w-full border border-gray-200 rounded-md p-3 text-sm" placeholder="New category..." autoFocus />
+                              <button type="button" onClick={() => { setShowCustomRestockCategory(false); setRestockCategory("General"); }} className="bg-gray-200 text-gray-700 px-3 py-2 rounded-md font-bold">✕</button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-600">Item Name</label>
+                          <input type="text" required value={restockItem} onChange={(e) => setRestockItem(e.target.value)} className="w-full border border-gray-200 rounded-md p-3 text-sm" placeholder="e.g. Cricket Bats" />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-600">Quantity</label>
+                          <input type="number" required min="1" value={restockQty} onChange={(e) => setRestockQty(e.target.value)} className="w-full border border-gray-200 rounded-md p-3 text-sm" placeholder="nos" />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-600">Date Received</label>
+                          <input type="date" required value={restockDate} onChange={(e) => setRestockDate(e.target.value)} className="w-full border border-gray-200 rounded-md p-3 text-sm" />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-600">Remarks</label>
+                          <textarea rows={2} required value={restockRemarks} onChange={(e) => setRestockRemarks(e.target.value)} className="w-full border border-gray-200 rounded-md p-3 text-sm resize-none" placeholder="Details..." />
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <button type="submit" className={`flex-1 text-white px-4 py-3 rounded-md text-sm font-bold transition-colors ${editingRestockId ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-sky-600 hover:bg-sky-700'}`}>
+                            {editingRestockId ? "Update Log" : "Save Restock Log"}
+                          </button>
+                          {editingRestockId && (
+                            <button type="button" onClick={cancelEditRestock} className="bg-gray-200 text-gray-700 px-4 py-3 rounded-md text-sm font-bold hover:bg-gray-300 transition-colors">Cancel</button>
+                          )}
+                        </div>
+                        {restockStatus && <p className={`text-sm font-bold mt-2 text-center ${editingRestockId ? 'text-yellow-800' : 'text-sky-800'}`}>{restockStatus}</p>}
+                      </form>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="bg-gray-50 border-b border-gray-200 p-4"><h3 className="font-bold text-gray-900">Recent Inward Records</h3></div>
+                    <div className="p-0 overflow-x-auto max-h-[500px] overflow-y-auto">
+                      <table className="w-full text-left text-sm whitespace-nowrap">
+                        <thead className="bg-white border-b border-gray-100 sticky top-0 z-10">
+                          <tr className="text-gray-500">
+                            <th className="p-4 font-semibold">Date Received</th>
+                            <th className="p-4 font-semibold">Item & Details</th>
+                            <th className="p-4 font-semibold">Remarks</th>
+                            <th className="p-4 font-semibold text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {receivedLogs.length > 0 ? receivedLogs.map((log) => (
+                            <tr key={log.id} className={`hover:bg-gray-50 transition-colors ${editingRestockId === log.id ? 'bg-yellow-50' : ''}`}>
+                              <td className="p-4 text-gray-600 font-medium">
+                                {new Date(log.received_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </td>
+                              <td className="p-4 font-bold text-sky-700">
+                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-1">{log.category}</span>
+                                <span className="block">{log.item_name} ({log.quantity} nos)</span>
+                              </td>
+                              <td className="p-4 text-gray-500 italic text-xs max-w-[200px] truncate">
+                                {log.remarks}
+                              </td>
+                              <td className="p-4 text-right">
+                                <button onClick={() => startEditRestock(log)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded text-xs font-bold mr-2 transition-colors">Edit</button>
+                                <button onClick={() => handleDeleteRestock(log.id, log.item_name)} className="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-bold transition-colors">Del</button>
+                              </td>
+                            </tr>
+                          )) : <tr><td colSpan={4} className="p-12 text-center text-gray-400 font-medium">No items have been logged as received yet.</td></tr>}
                         </tbody>
                       </table>
                     </div>
@@ -499,15 +716,16 @@ export default function AdminDashboard() {
                     <input type="text" required value={branch} onChange={(e) => setBranch(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm" placeholder="Branch" />
                     <input type="text" required value={semester} onChange={(e) => setSemester(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm" placeholder="Semester" />
                     <input type="text" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm lg:col-span-1" placeholder="Phone" />
+                    
                     <select required value={issuedItem} onChange={(e) => setIssuedItem(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm lg:col-span-2 bg-white">
                       <option value="" disabled>Select Item to Issue...</option>
                       {inventory.map(item => (
-                        <option key={item.id} value={item.item_name}>
-                          {/* UPDATED: Category first, then Item (nos) */}
+                        <option key={item.id} value={item.id}>
                           {item.category || 'General'} - {item.item_name} ({item.available_quantity} nos)
                         </option>
                       ))}
                     </select>
+
                     <input type="number" required min="1" value={issueQuantity} onChange={(e) => setIssueQuantity(e.target.value)} className="w-full border border-purple-200 rounded-md p-3 text-sm lg:col-span-1" placeholder="Qty" />
                     <div className="md:col-span-2 lg:col-span-4 flex items-center gap-4 mt-2">
                       <button type="submit" className="bg-purple-600 text-white px-6 md:px-8 py-3 rounded-md text-sm font-bold hover:bg-purple-700 transition-colors w-full md:w-auto">Issue Record Now</button>
@@ -530,16 +748,15 @@ export default function AdminDashboard() {
                             <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                               <td className="p-4 font-medium text-gray-900">{record.student_name}</td>
                               <td className="p-4 text-gray-600">
-                                {record.roll_no} • {record.branch} <br/>
-                                <span className="text-xs font-medium text-[#6A00F4] mt-1 inline-block">
+                                <span className="block">{record.roll_no} • {record.branch}</span>
+                                <span className="text-xs font-medium text-[#6A00F4] block mt-1">
                                   📞 {record.phone_number || "N/A"}
                                 </span>
                               </td>
                               <td className="p-4 font-bold text-purple-700">
-                                {/* UPDATED: Category first, then Item (nos) */}
-                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span><br/>
-                                {record.item_issued} ({record.quantity || 1} nos) <br/>
-                                <span className="text-[10px] font-medium text-slate-500">
+                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-1">{itemCategory}</span>
+                                <span className="block">{record.item_issued} ({record.quantity || 1} nos)</span>
+                                <span className="text-[10px] font-medium text-slate-500 block mt-1">
                                   Out: {new Date(record.issue_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </td>
@@ -657,20 +874,19 @@ export default function AdminDashboard() {
                           return (
                             <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                               <td className="p-4">
-                                <span className="text-xs text-gray-500">Issued: {new Date(log.issue_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span><br/>
-                                <span className="text-sm font-bold text-gray-900">Returned: {log.returned_at ? new Date(log.returned_at).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                                <span className="text-xs text-gray-500 block mb-1">Issued: {new Date(log.issue_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className="text-sm font-bold text-gray-900 block">Returned: {log.returned_at ? new Date(log.returned_at).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
                               </td>
                               <td className="p-4">
-                                <span className="font-bold text-gray-900">{log.student_name}</span> <br/>
-                                <span className="text-xs text-gray-500 font-medium">
+                                <span className="font-bold text-gray-900 block">{log.student_name}</span>
+                                <span className="text-xs text-gray-500 font-medium block mt-1">
                                   {log.roll_no} • {log.branch} <br/>
                                   <span className="text-[#6A00F4] mt-1 inline-block">📞 {log.phone_number || "N/A"}</span>
                                 </span>
                               </td>
                               <td className="p-4 font-bold text-purple-700">
-                                {/* UPDATED: Category first, then Item (nos) */}
-                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{itemCategory}</span><br/>
-                                {log.item_issued} ({log.quantity} nos)
+                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest block mb-1">{itemCategory}</span>
+                                <span className="block">{log.item_issued} ({log.quantity} nos)</span>
                               </td>
                               <td className="p-4 text-right">
                                 <span className="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-700">Returned</span>
@@ -705,11 +921,13 @@ export default function AdminDashboard() {
                           return (
                             <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                               <td className="p-4 text-gray-600">{new Date(log.request_date).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                              <td className="p-4"><span className="font-bold text-gray-900">{log.student_name}</span> <br/><span className="text-xs text-gray-500">{log.roll_no} • {log.branch}</span></td>
+                              <td className="p-4">
+                                <span className="font-bold text-gray-900 block">{log.student_name}</span>
+                                <span className="text-xs text-gray-500 block mt-1">{log.roll_no} • {log.branch}</span>
+                              </td>
                               <td className="p-4 font-bold text-gray-700">
-                                {/* UPDATED: Category first, then Item (nos) */}
-                                <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{itemCategory}</span><br/>
-                                {log.item_name} ({log.quantity} nos)
+                                <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest block mb-1">{itemCategory}</span>
+                                <span className="block">{log.item_name} ({log.quantity} nos)</span>
                               </td>
                               <td className="p-4 text-right">
                                 <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${log.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span>
